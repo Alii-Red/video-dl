@@ -1,0 +1,29 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Video DL",
+  "version": "0.1.0",
+  "identifier": "com.local.videodl",
+  "build": {
+    "frontendDist": "../frontend/dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": {
+      "script": "npm run dev",
+      "cwd": "C:/Users/Rédouane/Desktop/Video DL/apps/frontend"
+    },
+    "beforeBuildCommand": {
+      "script": "npm run build",
+      "cwd": "C:/Users/Rédouane/Desktop/Video DL/apps/frontend"
+    }
+  },
+  "app": {
+    "windows": [{ "title": "Video DL", "width": 1100, "height": 720 }],
+    "security": { "csp": null },
+    "withGlobalTauri": true
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": ["icons/icon.ico"],
+    "externalBin": ["binaries/yt-dlp"]
+  }
+}

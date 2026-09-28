@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-extension-connected"
+description = "Enables the extension_connected command without any pre-configured scope."
+commands.allow = ["extension_connected"]
+
+[[permission]]
+identifier = "deny-extension-connected"
+description = "Denies the extension_connected command without any pre-configured scope."
+commands.deny = ["extension_connected"]

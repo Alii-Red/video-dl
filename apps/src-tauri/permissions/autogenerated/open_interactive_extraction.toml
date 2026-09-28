@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-open-interactive-extraction"
+description = "Enables the open_interactive_extraction command without any pre-configured scope."
+commands.allow = ["open_interactive_extraction"]
+
+[[permission]]
+identifier = "deny-open-interactive-extraction"
+description = "Denies the open_interactive_extraction command without any pre-configured scope."
+commands.deny = ["open_interactive_extraction"]

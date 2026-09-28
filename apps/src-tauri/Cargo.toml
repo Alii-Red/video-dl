@@ -1,0 +1,65 @@
+[package]
+name = "video-dl"
+version = "0.1.0"
+edition = "2021"
+description = "Video DL — core backend (personal, local use)"
+publish = false
+
+[lib]
+name = "video_dl"
+path = "src/lib.rs"
+
+[[bin]]
+name = "video-dl"
+path = "src/main.rs"
+
+# Phase 1 dependencies only. Tauri (Phase 2), SQLx (Phase 3), reqwest / proxy
+# crates (Phase 6+) are intentionally NOT here yet — the core compiles and is
+# testable without them.
+[dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "process", "io-util", "time", "net"] }
+tokio-util = "0.7"
+# Phase 10 : serveur WebSocket local recevant les détections de l'extension Opera GX.
+tokio-tungstenite = "0.24"
+futures-util = "0.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+async-trait = "0.1"
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+# IPC contract → TypeScript type generation (Phase 2). Types are emitted to
+# apps/frontend/src/types/ when `cargo test` runs.
+ts-rs = { version = "7", default-features = false }
+# Persistence (Phase 3). No TLS (default-features=false); sqlite is bundled and
+# compiled from C via the MinGW gcc. Runtime query API only (no compile-time
+# `query!` macros) so no DATABASE_URL is needed at build time.
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "sqlite", "migrate", "macros"] }
+# Desktop shell (Tauri v2). `tray-icon` enables the system-tray icon/menu so the
+# app can be minimised to the tray instead of quitting on window close.
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+tauri-plugin-shell = "2"
+# Native OS notifications (download finished / failed).
+tauri-plugin-notification = "2"
+# Prevents duplicate windows from piling up if the user double-clicks the
+# shortcut while the app is already running (minimized/behind another
+# window) — focuses the existing one instead of spawning a new process.
+tauri-plugin-single-instance = "2"
+
+# Structured logging / observability.
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Detection (Phase 6): manifest parsing + HTTP probe.
+m3u8-rs = "6"
+quick-xml = "0.36"
+# native-tls → schannel on Windows (no OpenSSL/ring), friendlier to the GNU toolchain.
+reqwest = { version = "0.12", default-features = false, features = ["native-tls", "stream"] }
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
+async-trait = "0.1"
+uuid = { version = "1", features = ["v4"] }

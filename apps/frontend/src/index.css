@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+/* ── Design tokens ──────────────────────────────────────────────────────
+   Base stays on Tailwind's `neutral` scale (already used everywhere). We add
+   a single brand accent (violet) so primary actions read as one system, plus
+   a couple of named animations. */
+@theme {
+  --color-accent-50: #f5f3ff;
+  --color-accent-300: #c4b5fd;
+  --color-accent-400: #a78bfa;
+  --color-accent-500: #8b5cf6;
+  --color-accent-600: #7c3aed;
+  --color-accent-700: #6d28d9;
+
+  --animate-fade-in: fade-in 0.2s ease-out both;
+  --animate-fade-in-up: fade-in-up 0.25s ease-out both;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Indeterminate shimmer used by the progress bar while a download is starting
+   (percent still 0). */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* ── Base polish ──────────────────────────────────────────────────────── */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  /* Subtle top-lit gradient so large dark surfaces don't feel flat. */
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(124, 58, 237, 0.08), transparent 60%),
+    #0a0a0a;
+}
+
+/* Slim, theme-matched scrollbars (Chromium/WebView2). */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3f3f46 transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 9999px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+  background-clip: content-box;
+}
+
+/* Consistent, visible keyboard focus (accessibility). */
+:focus-visible {
+  outline: 2px solid var(--color-accent-500);
+  outline-offset: 2px;
+}

@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Video DL — détection live",
+  "version": "0.1.0",
+  "description": "Détecte les vidéos/manifestes chargés dans l'onglet actif et les envoie à l'app Video DL locale (WebSocket 127.0.0.1).",
+  "permissions": ["webRequest", "tabs", "storage", "webNavigation", "alarms"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content-script.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  }
+}

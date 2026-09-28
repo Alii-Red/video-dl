@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-rescan-extension"
+description = "Enables the rescan_extension command without any pre-configured scope."
+commands.allow = ["rescan_extension"]
+
+[[permission]]
+identifier = "deny-rescan-extension"
+description = "Denies the rescan_extension command without any pre-configured scope."
+commands.deny = ["rescan_extension"]

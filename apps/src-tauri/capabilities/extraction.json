@@ -1,0 +1,10 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "extraction",
+  "description": "Page-extraction windows load arbitrary third-party sites by design, so this is scoped to the single command the injected hook needs — never the full command set.",
+  "windows": ["extract-*"],
+  "remote": {
+    "urls": ["https://*", "http://*"]
+  },
+  "permissions": ["allow-report-detected-url"]
+}
