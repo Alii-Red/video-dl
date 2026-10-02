@@ -19,15 +19,17 @@ fn show_main_window(app: &tauri::AppHandle) {
     }
 }
 
-use crate::application::use_cases::{ExtractFromPage, IngestDetection};
-use crate::infrastructure::download::{CompositeEngine, HttpDownloadEngine, YtDlpEngine};
+use crate::application::use_cases::{ExtractFromPage, IngestDetection, ResolvePlaylist};
+use crate::infrastructure::download::{
+    CompositeEngine, HttpDownloadEngine, YtDlpEngine, YtDlpPlaylistResolver,
+};
 use crate::infrastructure::network::{ExtensionWsBridge, ExtensionWsHandle, HttpMediaProbe};
 use crate::infrastructure::providers::{DownloadOptions, ProviderRegistry, RegistryPlanner};
 use crate::infrastructure::scheduler::TaskScheduler;
 use crate::ipc::commands;
 use crate::ipc::dto::{
-    DownloadViewDto, HistoryEntryDto, MediaSourceDto, SettingsDto, StartDownloadArgs,
-    StartDownloadResponse,
+    DownloadViewDto, HistoryEntryDto, MediaSourceDto, PlaylistDto, SettingsDto,
+    StartDownloadArgs, StartDownloadResponse, StartPlaylistArgs, StartPlaylistResponse,
 };
 use crate::ipc::error::{IpcError, IpcErrorKind};
 use crate::ipc::events::IpcEvent;
@@ -70,6 +72,25 @@ async fn start_download(
     args: StartDownloadArgs,
 ) -> Cmd<StartDownloadResponse> {
     let res = commands::start_download(&state, args).await?;
+    dispatch(&scheduler.0);
+    Ok(res)
+}
+
+#[tauri::command]
+async fn resolve_playlist(
+    resolver: tauri::State<'_, ResolvePlaylist>,
+    url: String,
+) -> Cmd<Option<PlaylistDto>> {
+    commands::resolve_playlist(&resolver, url).await
+}
+
+#[tauri::command]
+async fn start_playlist_download(
+    state: tauri::State<'_, AppState>,
+    scheduler: tauri::State<'_, SchedulerHandle>,
+    args: StartPlaylistArgs,
+) -> Cmd<StartPlaylistResponse> {
+    let res = commands::start_playlist_download(&state, args).await?;
     dispatch(&scheduler.0);
     Ok(res)
 }
@@ -514,6 +535,10 @@ pub fn run() {
             // CompositeEngine routes each download between yt-dlp (site
             // extraction) and a direct HTTP stream (plain files yt-dlp's
             // generic extractor would refuse) — see RegistryPlanner.
+            let resolve_playlist = ResolvePlaylist::new(Arc::new(YtDlpPlaylistResolver::new(
+                ytdlp_path.clone(),
+                js_runtime.clone(),
+            )));
             let engine = Arc::new(CompositeEngine::new(
                 YtDlpEngine::new(ytdlp_path, ffmpeg_dir).with_js_runtime(js_runtime),
                 HttpDownloadEngine::new(),
@@ -586,6 +611,7 @@ pub fn run() {
 
             app.manage(extractor_registry);
             app.manage(extract_from_page);
+            app.manage(resolve_playlist);
             app.manage(state);
             app.manage(SchedulerHandle(scheduler));
 
@@ -626,6 +652,8 @@ pub fn run() {
             extract_from_page,
             open_interactive_extraction,
             start_download,
+            resolve_playlist,
+            start_playlist_download,
             cancel_download,
             pause_download,
             resume_download,

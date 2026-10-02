@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::application::error::ApplicationError;
 use crate::application::ports::DownloadRepository;
-use crate::domain::entities::{Download, HistoryEntry, Task, TaskState};
+use crate::domain::entities::{Download, HistoryEntry, Playlist, Task, TaskState};
 use crate::domain::value_objects::{MediaFormat, MediaUrl, Progress};
 
 /// SQLite-backed repository (SQLx). Swaps in for `InMemoryDownloadRepository`
@@ -69,25 +69,43 @@ impl DownloadRepository for SqlxDownloadRepository {
     async fn create(&self, download: Download, task: Task) -> Result<(), ApplicationError> {
         let mut tx = self.pool.begin().await.map_err(repo_err)?;
 
-        sqlx::query(
-            "INSERT INTO downloads (id, source_url, provider_id, title, format, output_path, created_at, max_height, audio_only, referer)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        )
-        .bind(download.id.to_string())
-        .bind(download.source_url.as_str())
-        .bind(&download.provider_id)
-        .bind(&download.title)
-        .bind(format_to_str(download.format))
-        .bind(&download.output_path)
-        .bind(download.created_at.to_rfc3339())
-        .bind(download.max_height.map(|h| h as i64))
-        .bind(download.audio_only as i64)
-        .bind(&download.referer)
-        .execute(&mut *tx)
-        .await
-        .map_err(repo_err)?;
-
+        insert_download(&mut tx, &download).await?;
         insert_task(&mut tx, &task).await?;
+
+        tx.commit().await.map_err(repo_err)
+    }
+
+    async fn create_playlist(
+        &self,
+        playlist: Playlist,
+        downloads: Vec<(Download, Task)>,
+    ) -> Result<(), ApplicationError> {
+        let mut tx = self.pool.begin().await.map_err(repo_err)?;
+
+        sqlx::query("INSERT INTO playlists (id, title, source_url, created_at) VALUES (?, ?, ?, ?)")
+            .bind(playlist.id.to_string())
+            .bind(&playlist.title)
+            .bind(playlist.source_url.as_str())
+            .bind(playlist.created_at.to_rfc3339())
+            .execute(&mut *tx)
+            .await
+            .map_err(repo_err)?;
+
+        for (download, task) in &downloads {
+            insert_download(&mut tx, download).await?;
+            insert_task(&mut tx, task).await?;
+        }
+        for item in &playlist.items {
+            sqlx::query(
+                "INSERT INTO playlist_items (playlist_id, download_id, position) VALUES (?, ?, ?)",
+            )
+            .bind(playlist.id.to_string())
+            .bind(item.download_id.to_string())
+            .bind(item.position as i64)
+            .execute(&mut *tx)
+            .await
+            .map_err(repo_err)?;
+        }
 
         tx.commit().await.map_err(repo_err)
     }
@@ -235,6 +253,30 @@ impl DownloadRepository for SqlxDownloadRepository {
 }
 
 // ---- helpers -----------------------------------------------------------------
+
+async fn insert_download(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    download: &Download,
+) -> Result<(), ApplicationError> {
+    sqlx::query(
+        "INSERT INTO downloads (id, source_url, provider_id, title, format, output_path, created_at, max_height, audio_only, referer)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    )
+    .bind(download.id.to_string())
+    .bind(download.source_url.as_str())
+    .bind(&download.provider_id)
+    .bind(&download.title)
+    .bind(format_to_str(download.format))
+    .bind(&download.output_path)
+    .bind(download.created_at.to_rfc3339())
+    .bind(download.max_height.map(|h| h as i64))
+    .bind(download.audio_only as i64)
+    .bind(&download.referer)
+    .execute(&mut **tx)
+    .await
+    .map_err(repo_err)
+    .map(|_| ())
+}
 
 async fn insert_task(
     tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-start-playlist-download"
+description = "Enables the start_playlist_download command without any pre-configured scope."
+commands.allow = ["start_playlist_download"]
+
+[[permission]]
+identifier = "deny-start-playlist-download"
+description = "Denies the start_playlist_download command without any pre-configured scope."
+commands.deny = ["start_playlist_download"]

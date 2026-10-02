@@ -6,6 +6,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+use crate::application::ports::{PlaylistEntry, ResolvedPlaylist};
 use crate::domain::entities::{Download, HistoryEntry, MediaSource, Task, TaskState};
 use crate::domain::value_objects::{
     MediaFormat, Progress, Quality, Settings, WindowGeometry, WindowMode,
@@ -380,4 +381,66 @@ impl From<SettingsDto> for Settings {
             extension_token: s.extension_token,
         }
     }
+}
+
+// ---- Playlists ---------------------------------------------------------------
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../frontend/src/types/", rename_all = "camelCase")]
+#[serde(rename_all = "camelCase")]
+pub struct PlaylistEntryDto {
+    pub url: String,
+    pub title: Option<String>,
+    pub duration_secs: Option<u32>,
+    pub thumbnail: Option<String>,
+}
+
+impl From<PlaylistEntry> for PlaylistEntryDto {
+    fn from(e: PlaylistEntry) -> Self {
+        Self {
+            url: e.url,
+            title: e.title,
+            duration_secs: e.duration_secs,
+            thumbnail: e.thumbnail,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
+#[ts(export, export_to = "../frontend/src/types/", rename_all = "camelCase")]
+#[serde(rename_all = "camelCase")]
+pub struct PlaylistDto {
+    pub title: String,
+    pub entries: Vec<PlaylistEntryDto>,
+}
+
+impl From<ResolvedPlaylist> for PlaylistDto {
+    fn from(p: ResolvedPlaylist) -> Self {
+        Self {
+            title: p.title,
+            entries: p.entries.into_iter().map(PlaylistEntryDto::from).collect(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, TS)]
+#[ts(export, export_to = "../frontend/src/types/", rename_all = "camelCase")]
+#[serde(rename_all = "camelCase")]
+pub struct StartPlaylistArgs {
+    /// The playlist URL as pasted (stored on the playlist record).
+    pub source_url: String,
+    pub title: String,
+    /// The entries the user kept, in playlist order.
+    pub entries: Vec<PlaylistEntryDto>,
+    pub max_height: Option<u32>,
+    pub audio_only: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
+#[ts(export, export_to = "../frontend/src/types/", rename_all = "camelCase")]
+#[serde(rename_all = "camelCase")]
+pub struct StartPlaylistResponse {
+    pub playlist_id: String,
+    /// One per queued entry, in the same order as `StartPlaylistArgs.entries`.
+    pub downloads: Vec<StartDownloadResponse>,
 }

@@ -12,6 +12,10 @@ import { useStartDownload } from "../downloads/hooks";
 import { useDownloadsStore } from "../../stores/downloadsStore";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
+import { PlaylistCard } from "./PlaylistCard";
+import type { PlaylistDto } from "../../types/PlaylistDto";
+import type { PlaylistEntryDto } from "../../types/PlaylistEntryDto";
+import type { StartPlaylistArgs } from "../../types/StartPlaylistArgs";
 import type { MediaSourceDto } from "../../types/MediaSourceDto";
 import type { IpcError } from "../../types/IpcError";
 
@@ -22,13 +26,20 @@ function mergeSources(prev: MediaSourceDto[], next: MediaSourceDto[]): MediaSour
   return [...prev, ...added];
 }
 
+function errorMessage(err: unknown): string {
+  return err && typeof err === "object" && "message" in err
+    ? String((err as { message: unknown }).message)
+    : String(err);
+}
+
 export function DetectionPage() {
   const [url, setUrl] = useState("");
   const [sources, setSources] = useState<MediaSourceDto[]>([]);
+  const [playlist, setPlaylist] = useState<{ url: string; data: PlaylistDto } | null>(null);
   // Drives the status line under the form. "extracting" covers both the
   // automatic silent pass and the user-triggered interactive one.
   const [status, setStatus] = useState<
-    "idle" | "probing" | "extracting" | "interactive-open" | "no-results"
+    "idle" | "resolving" | "probing" | "extracting" | "interactive-open" | "no-results"
   >("idle");
   const addItem = useDownloadsStore((s) => s.add);
   const [downloadError, setDownloadError] = useState<string | null>(null);
@@ -44,6 +55,9 @@ export function DetectionPage() {
     mutationFn: (u: string) => commands.openInteractiveExtraction(u),
   });
   const start = useStartDownload();
+  const startPlaylist = useMutation({
+    mutationFn: (args: StartPlaylistArgs) => commands.startPlaylistDownload(args),
+  });
 
   // While an interactive session is open, new sources stream in live via the
   // same media://detected channel used for direct-link probing.
@@ -63,6 +77,24 @@ export function DetectionPage() {
     if (!trimmed) return;
 
     setSources([]);
+    setPlaylist(null);
+    setDownloadError(null);
+
+    // Playlist/channel URLs are expanded first; the backend answers `null`
+    // immediately for anything that isn't playlist-shaped. A resolution
+    // failure just falls through to the single-media path.
+    setStatus("resolving");
+    try {
+      const resolved = await commands.resolvePlaylist(trimmed);
+      if (resolved) {
+        setPlaylist({ url: trimmed, data: resolved });
+        setStatus("idle");
+        return;
+      }
+    } catch (err) {
+      console.error("[VDL] resolve_playlist failed:", err);
+    }
+
     setStatus("probing");
 
     try {
@@ -139,20 +171,55 @@ export function DetectionPage() {
       // Once queued, drop the card so the list reflects what's still
       // actionable (consistent with the widget's behaviour).
       setSources((prev) => prev.filter((s) => s.url !== source.url));
+      return true;
     } catch (err) {
       // Previously swallowed silently — a rejected mutateAsync in an onClick
       // handler with no caller awaiting it just becomes an invisible
       // unhandled rejection. Surface it so "nothing happens" never happens.
       console.error("[VDL] start_download failed:", err);
-      const message =
-        err && typeof err === "object" && "message" in err
-          ? String((err as { message: unknown }).message)
-          : String(err);
-      setDownloadError(message);
+      setDownloadError(errorMessage(err));
+      return false;
     }
   };
 
-  const busy = status === "probing" || status === "extracting";
+  const onDownloadPlaylist = async (
+    entries: PlaylistEntryDto[],
+    maxHeight: number | null,
+    audioOnly: boolean,
+  ) => {
+    if (!playlist) return;
+    setDownloadError(null);
+    try {
+      const res = await startPlaylist.mutateAsync({
+        sourceUrl: playlist.url,
+        title: playlist.data.title,
+        entries,
+        maxHeight,
+        audioOnly,
+      });
+      res.downloads.forEach((d, i) =>
+        addItem({
+          taskId: d.taskId,
+          downloadId: d.downloadId,
+          url: entries[i].url,
+          title: entries[i].title,
+          state: "queued",
+          percent: 0,
+        }),
+      );
+      setPlaylist(null);
+    } catch (err) {
+      console.error("[VDL] start_playlist_download failed:", err);
+      setDownloadError(errorMessage(err));
+    }
+  };
+
+  // A watch URL opened from a playlist (`watch?v=…&list=…`) still names one
+  // video: let the user grab just that one (yt-dlp runs with --no-playlist).
+  const singleVideoUrl =
+    playlist && /[?&]v=/.test(playlist.url) ? playlist.url : null;
+
+  const busy = status === "resolving" || status === "probing" || status === "extracting";
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -191,6 +258,35 @@ export function DetectionPage() {
         </Card>
       )}
 
+      {status === "resolving" && (
+        <p className="flex items-center gap-2 text-sm text-neutral-400">
+          <Loader2 className="h-4 w-4 animate-spin" /> Analyse du lien…
+        </p>
+      )}
+      {playlist && (
+        <PlaylistCard
+          key={playlist.url}
+          playlist={playlist.data}
+          busy={startPlaylist.isPending || start.isPending}
+          onDownload={onDownloadPlaylist}
+          onSingleVideo={
+            singleVideoUrl
+              ? () =>
+                  void onDownload({
+                    url: singleVideoUrl,
+                    format: "progressive_mp_4",
+                    title: null,
+                    qualities: [],
+                    protected: false,
+                    thumbnail: null,
+                    durationSecs: null,
+                    sourceTabId: null,
+                    pageUrl: null,
+                  }).then((ok) => ok && setPlaylist(null))
+              : undefined
+          }
+        />
+      )}
       {status === "probing" && (
         <p className="flex items-center gap-2 text-sm text-neutral-400">
           <Loader2 className="h-4 w-4 animate-spin" /> Analyse du lien…

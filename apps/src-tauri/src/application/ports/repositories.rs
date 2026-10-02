@@ -2,13 +2,21 @@ use async_trait::async_trait;
 use uuid::Uuid;
 
 use crate::application::error::ApplicationError;
-use crate::domain::entities::{Download, HistoryEntry, Task, TaskState};
+use crate::domain::entities::{Download, HistoryEntry, Playlist, Task, TaskState};
 
 /// Persistence port for downloads and their tasks. Implemented in-memory in
 /// Phase 1, by SQLx in Phase 3.
 #[async_trait]
 pub trait DownloadRepository: Send + Sync {
     async fn create(&self, download: Download, task: Task) -> Result<(), ApplicationError>;
+
+    /// Persist a playlist together with all of its downloads and their queued
+    /// tasks, atomically: either the whole playlist is queued or nothing is.
+    async fn create_playlist(
+        &self,
+        playlist: Playlist,
+        downloads: Vec<(Download, Task)>,
+    ) -> Result<(), ApplicationError>;
 
     async fn get_download(&self, id: Uuid) -> Result<Download, ApplicationError>;
 

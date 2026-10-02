@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-resolve-playlist"
+description = "Enables the resolve_playlist command without any pre-configured scope."
+commands.allow = ["resolve_playlist"]
+
+[[permission]]
+identifier = "deny-resolve-playlist"
+description = "Denies the resolve_playlist command without any pre-configured scope."
+commands.deny = ["resolve_playlist"]

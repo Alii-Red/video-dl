@@ -8,6 +8,9 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type { MediaSourceDto } from "../types/MediaSourceDto";
 import type { StartDownloadArgs } from "../types/StartDownloadArgs";
 import type { StartDownloadResponse } from "../types/StartDownloadResponse";
+import type { PlaylistDto } from "../types/PlaylistDto";
+import type { StartPlaylistArgs } from "../types/StartPlaylistArgs";
+import type { StartPlaylistResponse } from "../types/StartPlaylistResponse";
 import type { HistoryEntryDto } from "../types/HistoryEntryDto";
 import type { DownloadViewDto } from "../types/DownloadViewDto";
 import type { SettingsDto } from "../types/SettingsDto";
@@ -20,6 +23,10 @@ export const commands = {
   probeUrl: (url: string) => invoke<MediaSourceDto>("probe_url", { url }),
   startDownload: (args: StartDownloadArgs) =>
     invoke<StartDownloadResponse>("start_download", { args }),
+  /** `null` when the URL isn't a playlist (fast — no yt-dlp spawn). */
+  resolvePlaylist: (url: string) => invoke<PlaylistDto | null>("resolve_playlist", { url }),
+  startPlaylistDownload: (args: StartPlaylistArgs) =>
+    invoke<StartPlaylistResponse>("start_playlist_download", { args }),
   cancelDownload: (taskId: string) => invoke<void>("cancel_download", { taskId }),
   pauseDownload: (taskId: string) => invoke<void>("pause_download", { taskId }),
   resumeDownload: (taskId: string) => invoke<void>("resume_download", { taskId }),

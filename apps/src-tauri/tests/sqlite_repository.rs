@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use video_dl::application::ports::{DownloadRepository, EventPublisher};
 use video_dl::application::use_cases::RecoverInterruptedTasks;
-use video_dl::domain::entities::{Download, Task, TaskState};
+use video_dl::domain::entities::{Download, Playlist, Task, TaskState};
 use video_dl::domain::value_objects::{MediaFormat, MediaUrl};
 use video_dl::infrastructure::database::SqlxDownloadRepository;
 use video_dl::infrastructure::events::InMemoryEventBus;
@@ -135,4 +135,30 @@ fn uuid_v4() -> uuid::Uuid {
         MediaFormat::Hls,
     )
     .id
+}
+
+#[tokio::test]
+async fn create_playlist_persists_items_and_queues_every_download() {
+    let repo = repo().await;
+    let mut playlist = Playlist::new(
+        "My list",
+        MediaUrl::parse("https://www.youtube.com/playlist?list=PL1").unwrap(),
+    );
+    let rows = vec![sample(), sample()];
+    for (download, _) in &rows {
+        playlist.push(download.id);
+    }
+    let first = rows[0].0.id;
+    repo.create_playlist(playlist, rows).await.unwrap();
+
+    assert_eq!(repo.get_download(first).await.unwrap().title.as_deref(), Some("clip"));
+    let queued = repo.list_tasks_by_state(TaskState::Queued).await.unwrap();
+    assert_eq!(queued.len(), 2);
+
+    let pool = repo.pool();
+    let items: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM playlist_items")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(items, 2);
 }

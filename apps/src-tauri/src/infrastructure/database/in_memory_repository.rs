@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::application::error::ApplicationError;
 use crate::application::ports::DownloadRepository;
-use crate::domain::entities::{Download, HistoryEntry, Task, TaskState};
+use crate::domain::entities::{Download, HistoryEntry, Playlist, Task, TaskState};
 
 /// In-memory repository for Phase 1 and tests. Replaced by a SQLx implementation
 /// in Phase 3. Locks are never held across an `.await`, so a std `Mutex` is fine.
@@ -16,6 +16,7 @@ pub struct InMemoryDownloadRepository {
     downloads: Mutex<HashMap<Uuid, Download>>,
     tasks: Mutex<HashMap<Uuid, Task>>,
     history: Mutex<Vec<HistoryEntry>>,
+    playlists: Mutex<Vec<Playlist>>,
 }
 
 impl InMemoryDownloadRepository {
@@ -29,6 +30,19 @@ impl DownloadRepository for InMemoryDownloadRepository {
     async fn create(&self, download: Download, task: Task) -> Result<(), ApplicationError> {
         self.downloads.lock().unwrap().insert(download.id, download);
         self.tasks.lock().unwrap().insert(task.id, task);
+        Ok(())
+    }
+
+    async fn create_playlist(
+        &self,
+        playlist: Playlist,
+        downloads: Vec<(Download, Task)>,
+    ) -> Result<(), ApplicationError> {
+        for (download, task) in downloads {
+            self.downloads.lock().unwrap().insert(download.id, download);
+            self.tasks.lock().unwrap().insert(task.id, task);
+        }
+        self.playlists.lock().unwrap().push(playlist);
         Ok(())
     }
 

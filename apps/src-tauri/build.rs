@@ -10,6 +10,8 @@ fn main() {
             "extract_from_page",
             "open_interactive_extraction",
             "start_download",
+            "resolve_playlist",
+            "start_playlist_download",
             "cancel_download",
             "pause_download",
             "resume_download",

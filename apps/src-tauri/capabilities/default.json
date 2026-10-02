@@ -23,6 +23,8 @@
     "allow-extract-from-page",
     "allow-open-interactive-extraction",
     "allow-start-download",
+    "allow-resolve-playlist",
+    "allow-start-playlist-download",
     "allow-cancel-download",
     "allow-pause-download",
     "allow-resume-download",

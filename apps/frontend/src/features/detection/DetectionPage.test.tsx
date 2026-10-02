@@ -12,6 +12,8 @@ const probeUrl = vi.fn();
 const extractFromPage = vi.fn();
 const openInteractiveExtraction = vi.fn();
 const startDownload = vi.fn().mockResolvedValue({ downloadId: "d1", taskId: "t1" });
+const resolvePlaylist = vi.fn();
+const startPlaylistDownload = vi.fn();
 let mediaDetectedHandler: ((p: MediaDetectedPayload) => void) | null = null;
 
 vi.mock("../../lib/ipc", () => ({
@@ -20,6 +22,8 @@ vi.mock("../../lib/ipc", () => ({
     extractFromPage: (...args: unknown[]) => extractFromPage(...args),
     openInteractiveExtraction: (...args: unknown[]) => openInteractiveExtraction(...args),
     startDownload: (...args: unknown[]) => startDownload(...args),
+    resolvePlaylist: (...args: unknown[]) => resolvePlaylist(...args),
+    startPlaylistDownload: (...args: unknown[]) => startPlaylistDownload(...args),
   },
   events: {
     onMediaDetected: (cb: (p: MediaDetectedPayload) => void) => {
@@ -68,6 +72,7 @@ beforeEach(() => {
   useDownloadsStore.setState({ items: {} });
   mediaDetectedHandler = null;
   vi.clearAllMocks();
+  resolvePlaylist.mockResolvedValue(null);
 });
 
 afterEach(() => {
@@ -171,5 +176,67 @@ describe("DetectionPage", () => {
         screen.queryByText(/fenêtre d'extraction ouverte/i),
       ).not.toBeInTheDocument(),
     );
+  });
+
+  describe("playlists", () => {
+    const playlistUrl = "https://www.youtube.com/watch?v=b&list=PL1";
+    const playlist = {
+      title: "My list",
+      entries: [
+        { url: "https://www.youtube.com/watch?v=a", title: "Alpha", durationSecs: 61, thumbnail: null },
+        { url: "https://www.youtube.com/watch?v=b", title: "Beta", durationSecs: null, thumbnail: null },
+      ],
+    };
+
+    it("shows the playlist instead of probing, and queues the checked entries", async () => {
+      resolvePlaylist.mockResolvedValue(playlist);
+      startPlaylistDownload.mockResolvedValue({
+        playlistId: "p1",
+        downloads: [{ downloadId: "d2", taskId: "t2" }],
+      });
+      renderPage();
+      await typeAndSubmit(playlistUrl);
+
+      expect(await screen.findByText("My list")).toBeInTheDocument();
+      expect(probeUrl).not.toHaveBeenCalled();
+
+      const user = userEvent.setup();
+      await user.click(screen.getByRole("checkbox", { name: /alpha/i }));
+      await user.selectOptions(screen.getByLabelText("Qualité"), "720p");
+      await user.click(screen.getByRole("button", { name: /télécharger 1 vidéo/i }));
+
+      await waitFor(() => expect(startPlaylistDownload).toHaveBeenCalledTimes(1));
+      expect(startPlaylistDownload).toHaveBeenCalledWith({
+        sourceUrl: playlistUrl,
+        title: "My list",
+        entries: [playlist.entries[1]],
+        maxHeight: 720,
+        audioOnly: false,
+      });
+      expect(useDownloadsStore.getState().items["t2"]?.title).toBe("Beta");
+      await waitFor(() => expect(screen.queryByText("My list")).not.toBeInTheDocument());
+    });
+
+    it("can download only the watched video from a playlist link", async () => {
+      resolvePlaylist.mockResolvedValue(playlist);
+      renderPage();
+      await typeAndSubmit(playlistUrl);
+
+      const user = userEvent.setup();
+      await user.click(await screen.findByRole("button", { name: /cette vidéo seulement/i }));
+
+      await waitFor(() => expect(startDownload).toHaveBeenCalledTimes(1));
+      expect(startDownload.mock.calls[0][0]).toMatchObject({ url: playlistUrl });
+      expect(startPlaylistDownload).not.toHaveBeenCalled();
+    });
+
+    it("falls back to the normal probe when playlist resolution fails", async () => {
+      resolvePlaylist.mockRejectedValue({ kind: "probe", message: "yt-dlp: boom" });
+      probeUrl.mockResolvedValue(mediaSource("https://cdn.example.com/a.mp4", "Direct video"));
+      renderPage();
+      await typeAndSubmit("https://cdn.example.com/a.mp4");
+
+      expect(await screen.findByText("Direct video")).toBeInTheDocument();
+    });
   });
 });

@@ -398,6 +398,35 @@ fenêtre déjà lancée et vérifier à l'œil probe/pipeline complet/pause-annu
 réglages dans la vraie UI (le code est câblé et le process est stable, mais ce
 dernier maillon visuel n'a pas été cliqué par l'assistant).
 
+**Playlists (2026-10-02)** — dernière brique de la Phase 8. Une URL de playlist
+(YouTube `playlist?list=`, `watch?v=…&list=…`, chaîne `/@…`, `/channel/`…, Vimeo
+showcase/album/channel) est **dépliée** puis chaque vidéo est mise en file comme
+un téléchargement ordinaire — le pipeline engine/scheduler/progression est
+réutilisé tel quel, et `--no-playlist` reste forcé côté engine.
+- Port `PlaylistResolver` + `YtDlpPlaylistResolver`
+  (`infrastructure/download/ytdlp_playlist.rs`) : `yt-dlp --flat-playlist -J`
+  (une requête de métadonnées, rien de téléchargé, timeout 90 s). Pré-filtre
+  `looks_like_playlist` : une URL non-playlist ne lance **aucun** process.
+  Parseur pur testé : onglets de chaîne imbriqués aplatis, vidéos
+  supprimées/privées ignorées, doublons retirés. Format vérifié contre le vrai
+  yt-dlp sur une vraie playlist (10 entrées, titres/durées OK).
+- Use cases `ResolvePlaylist` / `StartPlaylistDownload` ; méthode repo
+  `create_playlist` **transactionnelle** (playlist + downloads + tasks +
+  `playlist_items` — tables déjà présentes dans `0001_initial.sql`, pas de
+  nouvelle migration).
+- IPC : `resolve_playlist` (→ `PlaylistDto | null`) et
+  `start_playlist_download` (+ ACL dans `build.rs` / `capabilities/default.json`).
+- UI (page Détection) : l'URL est d'abord résolue comme playlist ; si c'en est
+  une → carte `PlaylistCard` (cases à cocher, tout cocher/décocher, qualité
+  Meilleure/1080/720/480/Audio, « Télécharger N vidéos »), plus
+  « Cette vidéo seulement » pour un lien `watch?v=…&list=…`. Échec de
+  résolution → retombe sur le probe normal.
+- Tests : 98 backend (+8 unitaires, +1 SQLite), 41 frontend (+3).
+- **À vérifier par l'utilisateur** dans la vraie fenêtre : coller une URL de
+  playlist dans Détection.
+- Limite : une « Mix » YouTube (`list=RD…`) est aussi proposée comme playlist
+  (~25-50 entrées) — d'où le bouton « Cette vidéo seulement ».
+
 ## Avancement par phase (roadmap ADR)
 
 | Phase | Sujet | État |
@@ -411,7 +440,7 @@ dernier maillon visuel n'a pas été cliqué par l'assistant).
 | 6 | Détection (classify, HLS, DASH, probe HTTP) | ✅ Fait, testé |
 | 7 | Providers (generic/youtube/reddit/vimeo + registry) | ✅ Fait, testé |
 | — | **Assemblage Tauri (shell desktop)** | ✅ Fait — compile et tourne sous MSVC (voir ci-dessous) |
-| 8 | Améliorations : options débit/sous-titres, persistance settings, téléchargements actifs, annulation/pause réelles, **output_path + historique réel** | 🟡 Presque fini (reste playlists) |
+| 8 | Améliorations : options débit/sous-titres, persistance settings, téléchargements actifs, annulation/pause réelles, output_path + historique réel, **playlists** | ✅ Fait, testé (playlists non cliquées dans la vraie fenêtre) |
 | 9 | Mode fenêtre standard/volatile (widget always-on-top) | ✅ Fait, testé |
 | 10 | Détection live (extension Opera GX + pont WebSocket local) | ✅ Fait, testé (extension non vérifiée en conditions réelles — voir ci-dessous) |
 | — | Proxy MITM (hudsucker + rcgen) | ❌ Abandonné (décision 2026-07-19, voir ADR 4.5) — remplacé par la Phase 10 |
@@ -422,7 +451,7 @@ sous-titres), persistance des réglages (`Settings` + `SettingsRepository` in-me
 branchée), `list_active` (vue Download+Task) exposée en IPC + hydratation UI, et
 **annulation/pause qui interrompent réellement le process yt-dlp** (registre
 `RunningTasks` + port `TaskController` + `CancellationToken` ; `kill_on_drop`).
-**Reste Phase 8** : écriture `output_path`/`history` à la complétion, playlists.
+**Phase 8 terminée** (playlists ajoutées le 2026-10-02, voir section dédiée ci-dessous).
 
 Ajouté aussi (testé) : à la complétion, **`output_path` persisté sur le download**
 (capturé du vrai yt-dlp via `--print-to-file after_move:filepath`) et **ligne
@@ -454,15 +483,13 @@ Lancer : `cargo test --test e2e_pipeline -- --ignored --nocapture` (yt-dlp requi
 
 ## Ce qu'il reste (par ordre de priorité)
 
-1. **Assembler le shell Tauri** — suivre [INTEGRATION-TAURI.md](INTEGRATION-TAURI.md)
-   après avoir installé MSVC Build Tools. Tout le code appelé (commandes, bootstrap,
-   bridge d'events, scheduler, engine, providers) existe déjà.
-2. **Brancher le scheduler côté desktop** — instancier `TaskScheduler` +
-   `YtDlpEngine` (sidecars) + `RegistryPlanner`, appeler `run_pending()` au boot et
-   après chaque `start_download` (détaillé dans le guide Tauri, §7).
-3. **Phase 8** — persistance des settings (table `settings`), écriture de
-   `output_path`/`history` à la complétion, sous-titres, limitation de débit fine.
-4. **Phase 9** — proxy MITM local (détection passive pendant la navigation).
+Toutes les phases de la roadmap sont codées. Restent des vérifications réelles :
+1. **Test manuel dans la vraie fenêtre** : probe, pipeline complet,
+   pause/annulation, réglages, **playlists**.
+2. **Extension Opera GX en conditions réelles** (Phase 10, jamais vérifiée dans
+   le navigateur).
+3. Rebuild + réinstallation de la version de production
+   (`.\scripts\dev-msvc.ps1 tauri build`) pour embarquer les playlists.
 
 ## Notes d'environnement (important)
 

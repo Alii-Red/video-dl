@@ -8,6 +8,7 @@ mod ingest_detection;
 mod list_active;
 mod list_history;
 mod pause_resume;
+mod playlist;
 mod probe_url;
 mod recover_interrupted;
 mod remove_download;
@@ -22,6 +23,10 @@ pub use ingest_detection::{DetectionMeta, IngestDetection};
 pub use list_active::ListActiveDownloads;
 pub use list_history::ListHistory;
 pub use pause_resume::PauseResume;
+pub use playlist::{
+    PlaylistItemRequest, ResolvePlaylist, StartPlaylistDownload, StartPlaylistRequest,
+    StartPlaylistResult,
+};
 pub use probe_url::ProbeUrl;
 pub use recover_interrupted::RecoverInterruptedTasks;
 pub use remove_download::RemoveDownload;

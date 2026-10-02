@@ -6,7 +6,7 @@ use crate::application::ports::{
 };
 use crate::application::use_cases::{
     CancelDownload, DeleteHistoryEntry, GetSettings, ListActiveDownloads, ListHistory,
-    PauseResume, ProbeUrl, RecoverInterruptedTasks, RemoveDownload, RetryDownload, StartDownload,
+    PauseResume, ProbeUrl, StartPlaylistDownload, RecoverInterruptedTasks, RemoveDownload, RetryDownload, StartDownload,
     UpdateSettings,
 };
 use crate::infrastructure::database::{
@@ -25,6 +25,7 @@ use crate::infrastructure::scheduler::RunningTasks;
 pub struct AppState {
     pub probe_url: ProbeUrl,
     pub start_download: StartDownload,
+    pub start_playlist: StartPlaylistDownload,
     pub cancel_download: CancelDownload,
     pub pause_resume: PauseResume,
     pub list_history: ListHistory,
@@ -59,6 +60,7 @@ impl AppState {
         Self {
             probe_url: ProbeUrl::new(probe, publisher.clone()),
             start_download: StartDownload::new(download_repo.clone(), publisher.clone()),
+            start_playlist: StartPlaylistDownload::new(download_repo.clone(), publisher.clone()),
             cancel_download: CancelDownload::new(
                 download_repo.clone(),
                 publisher.clone(),

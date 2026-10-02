@@ -6,12 +6,15 @@ use std::time::Duration;
 
 use uuid::Uuid;
 
-use crate::application::use_cases::{ExtractFromPage, StartDownloadRequest};
+use crate::application::use_cases::{
+    ExtractFromPage, PlaylistItemRequest, ResolvePlaylist, StartDownloadRequest,
+    StartPlaylistRequest,
+};
 use crate::state::AppState;
 
 use super::dto::{
-    DownloadViewDto, HistoryEntryDto, MediaSourceDto, SettingsDto, StartDownloadArgs,
-    StartDownloadResponse,
+    DownloadViewDto, HistoryEntryDto, MediaSourceDto, PlaylistDto, SettingsDto,
+    StartDownloadArgs, StartDownloadResponse, StartPlaylistArgs, StartPlaylistResponse,
 };
 use super::error::{IpcError, IpcErrorKind};
 
@@ -39,6 +42,47 @@ pub async fn start_download(
     Ok(StartDownloadResponse {
         download_id: res.download_id.to_string(),
         task_id: res.task_id.to_string(),
+    })
+}
+
+pub async fn resolve_playlist(
+    resolver: &ResolvePlaylist,
+    url: String,
+) -> Result<Option<PlaylistDto>, IpcError> {
+    Ok(resolver.execute(&url).await?.map(PlaylistDto::from))
+}
+
+pub async fn start_playlist_download(
+    state: &AppState,
+    args: StartPlaylistArgs,
+) -> Result<StartPlaylistResponse, IpcError> {
+    let res = state
+        .start_playlist
+        .execute(StartPlaylistRequest {
+            source_url: args.source_url,
+            title: args.title,
+            items: args
+                .entries
+                .into_iter()
+                .map(|e| PlaylistItemRequest {
+                    url: e.url,
+                    title: e.title,
+                })
+                .collect(),
+            max_height: args.max_height,
+            audio_only: args.audio_only,
+        })
+        .await?;
+    Ok(StartPlaylistResponse {
+        playlist_id: res.playlist_id.to_string(),
+        downloads: res
+            .downloads
+            .into_iter()
+            .map(|(download_id, task_id)| StartDownloadResponse {
+                download_id: download_id.to_string(),
+                task_id: task_id.to_string(),
+            })
+            .collect(),
     })
 }
 
