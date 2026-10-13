@@ -438,6 +438,49 @@ fn init_tracing() {
     let _ = fmt().with_env_filter(filter).try_init();
 }
 
+/// Bootstrap the SQLite-backed state, self-healing a corrupt database file. A
+/// hard crash or force-kill mid-write can leave the DB "malformed"; rather than
+/// panicking on every launch forever (a boot loop), back the bad file up and
+/// recreate a fresh one. History/settings are lost, but the app starts — far
+/// better than being permanently wedged. Non-corruption errors still panic
+/// (they indicate a real bug, not a recoverable state).
+fn bootstrap_with_recovery(db_path: &std::path::Path, probe: Arc<HttpMediaProbe>) -> AppState {
+    let path_str = db_path.to_string_lossy().to_string();
+    match tauri::async_runtime::block_on(AppState::bootstrap_sqlite(&path_str, probe.clone())) {
+        Ok(state) => state,
+        Err(e) if is_db_corruption(&e.to_string()) => {
+            let stamp = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs())
+                .unwrap_or(0);
+            let backup = db_path.with_extension(format!("sqlite.corrupt-{stamp}"));
+            tracing::error!(
+                error = %e,
+                backup = %backup.display(),
+                "SQLite DB corrupt — backing up and recreating a fresh one",
+            );
+            let _ = std::fs::rename(db_path, &backup);
+            // A stale WAL/SHM against a freshly created DB is itself corruption.
+            let _ = std::fs::remove_file(format!("{path_str}-wal"));
+            let _ = std::fs::remove_file(format!("{path_str}-shm"));
+            tauri::async_runtime::block_on(AppState::bootstrap_sqlite(&path_str, probe))
+                .expect("bootstrap failed even after recreating the database")
+        }
+        Err(e) => panic!("bootstrap failed: {e}"),
+    }
+}
+
+/// Whether an error message indicates an unreadable/corrupt SQLite file (vs a
+/// transient or logic error that recreating the DB wouldn't fix).
+fn is_db_corruption(msg: &str) -> bool {
+    let m = msg.to_lowercase();
+    m.contains("malformed")
+        || m.contains("disk image")
+        || m.contains("not a database")
+        || m.contains("database corrupt")
+        || m.contains("file is encrypted")
+}
+
 pub fn run() {
     init_tracing();
     tracing::info!("Video DL starting");
@@ -469,11 +512,7 @@ pub fn run() {
             std::fs::create_dir_all(db_path.parent().unwrap()).ok();
 
             let probe = Arc::new(HttpMediaProbe::new());
-            let state = tauri::async_runtime::block_on(AppState::bootstrap_sqlite(
-                db_path.to_string_lossy().as_ref(),
-                probe.clone(),
-            ))
-            .expect("bootstrap failed");
+            let state = bootstrap_with_recovery(&db_path, probe.clone());
 
             // Bridge the internal event bus -> Tauri events (backend -> frontend).
             let mut rx = state.event_bus.subscribe();

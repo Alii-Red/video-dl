@@ -483,6 +483,12 @@
           "markdownDescription": "Enables the rescan_extension command without any pre-configured scope."
         },
         {
+          "description": "Enables the resolve_playlist command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-resolve-playlist",
+          "markdownDescription": "Enables the resolve_playlist command without any pre-configured scope."
+        },
+        {
           "description": "Enables the resume_download command without any pre-configured scope.",
           "type": "string",
           "const": "allow-resume-download",
@@ -499,6 +505,12 @@
           "type": "string",
           "const": "allow-start-download",
           "markdownDescription": "Enables the start_download command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the start_playlist_download command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-start-playlist-download",
+          "markdownDescription": "Enables the start_playlist_download command without any pre-configured scope."
         },
         {
           "description": "Enables the update_settings command without any pre-configured scope.",
@@ -609,6 +621,12 @@
           "markdownDescription": "Denies the rescan_extension command without any pre-configured scope."
         },
         {
+          "description": "Denies the resolve_playlist command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-resolve-playlist",
+          "markdownDescription": "Denies the resolve_playlist command without any pre-configured scope."
+        },
+        {
           "description": "Denies the resume_download command without any pre-configured scope.",
           "type": "string",
           "const": "deny-resume-download",
@@ -625,6 +643,12 @@
           "type": "string",
           "const": "deny-start-download",
           "markdownDescription": "Denies the start_download command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the start_playlist_download command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-start-playlist-download",
+          "markdownDescription": "Denies the start_playlist_download command without any pre-configured scope."
         },
         {
           "description": "Denies the update_settings command without any pre-configured scope.",

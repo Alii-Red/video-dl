@@ -37,7 +37,14 @@ pub struct YtDlpEngine {
 /// Generous enough that a slow-but-alive extraction/merge never trips it,
 /// while still bounding a truly wedged process.
 const DEFAULT_INACTIVITY_TIMEOUT: Duration = Duration::from_secs(180);
-const DEFAULT_CONCURRENT_FRAGMENTS: u8 = 4;
+// HLS/DASH CDNs (vidmoly/vmXXX for anime-sama, ...) throttle each connection
+// (~0.2 MiB/s each here) but allow many in parallel, so throughput scales almost
+// linearly with this until the user's own bandwidth caps it: measured on a real
+// anime-sama stream — 4→1 MiB/s, 16→3 MiB/s, 64→10 MiB/s, 100→32 MiB/s (ceiling).
+// 64 is the chosen balance: a big, stable speed-up (fewer slow connections drag
+// the aggregate down) without the very high connection count of 100 that risks
+// tripping anti-abuse throttling on stricter sites. Ignored for progressive files.
+const DEFAULT_CONCURRENT_FRAGMENTS: u8 = 64;
 
 impl YtDlpEngine {
     pub fn new(ytdlp_path: impl Into<PathBuf>, ffmpeg_dir: Option<PathBuf>) -> Self {
