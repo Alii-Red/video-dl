@@ -8,6 +8,10 @@ l'extraction de page, ou un import manuel d'URL) et les télécharge avec
 yt-dlp / FFmpeg. Un widget compact *always-on-top* permet de lancer un
 téléchargement en un clic pendant la navigation.
 
+> 🟢 **Débutant ?** Suivez le **[guide d'installation pas à pas](INSTALL.md)** :
+> il part de zéro et explique chaque clic. Le reste de ce README est un résumé
+> technique.
+
 ## Fonctionnalités
 
 - **Détection live** via une extension Opera GX (canal WebSocket local) :
