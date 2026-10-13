@@ -13,6 +13,7 @@ import { useDownloadsStore } from "../../stores/downloadsStore";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { PlaylistCard } from "./PlaylistCard";
+import { WelcomeCard } from "../onboarding/WelcomeCard";
 import type { PlaylistDto } from "../../types/PlaylistDto";
 import type { PlaylistEntryDto } from "../../types/PlaylistEntryDto";
 import type { StartPlaylistArgs } from "../../types/StartPlaylistArgs";
@@ -223,6 +224,8 @@ export function DetectionPage() {
 
   return (
     <div className="max-w-2xl space-y-6">
+      <WelcomeCard />
+
       <div>
         <h2 className="text-2xl font-semibold tracking-tight">Détection</h2>
         <p className="mt-1 text-sm text-neutral-400">
@@ -315,6 +318,14 @@ export function DetectionPage() {
             Ouvrir la page pour extraction interactive
           </Button>
         </Card>
+      )}
+
+      {status === "idle" && sources.length === 0 && !playlist && !downloadError && (
+        <p className="text-sm text-neutral-500">
+          Rien d'analysé pour l'instant. Colle un lien ci-dessus et clique
+          Analyser — ou installe l'extension (Réglages) pour une détection
+          automatique pendant la navigation.
+        </p>
       )}
 
       {sources.length > 0 && (

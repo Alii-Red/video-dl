@@ -3,6 +3,7 @@ import { Download, History, Search, Settings } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { ErrorBoundary } from "../../app/ErrorBoundary";
 import { ModeToggle } from "../window/ModeToggle";
+import { ExtensionBanner } from "./ExtensionBanner";
 
 const tabs: { to: string; label: string; icon: LucideIcon }[] = [
   { to: "/detect", label: "Détection", icon: Search },
@@ -27,6 +28,8 @@ export function AppLayout() {
           <ModeToggle />
         </div>
       </header>
+
+      <ExtensionBanner />
 
       <div className="flex min-h-0 flex-1">
         <nav className="w-56 shrink-0 space-y-1 border-r border-neutral-800/80 p-3">

@@ -139,7 +139,10 @@ export function HistoryPage() {
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-neutral-900 text-neutral-600">
             <HistoryIcon className="h-7 w-7" />
           </div>
-          <p className="text-sm text-neutral-400">Aucun téléchargement terminé.</p>
+          <p className="text-sm text-neutral-400">
+            Aucun téléchargement terminé pour l'instant. Tes vidéos téléchargées
+            apparaîtront ici.
+          </p>
         </div>
       ) : filtered.length === 0 ? (
         <p className="text-sm text-neutral-400">Aucun résultat pour « {query} ».</p>

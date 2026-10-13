@@ -61,7 +61,7 @@ describe("HistoryPage", () => {
     listHistory.mockResolvedValue([]);
     renderPage();
     expect(
-      await screen.findByText("Aucun téléchargement terminé."),
+      await screen.findByText(/Aucun téléchargement terminé/i),
     ).toBeInTheDocument();
   });
 
@@ -91,7 +91,7 @@ describe("HistoryPage", () => {
 
     expect(deleteHistoryEntry).toHaveBeenCalledWith("d1");
     await waitFor(() =>
-      expect(screen.getByText("Aucun téléchargement terminé.")).toBeInTheDocument(),
+      expect(screen.getByText(/Aucun téléchargement terminé/i)).toBeInTheDocument(),
     );
   });
 

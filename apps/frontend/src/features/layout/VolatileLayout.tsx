@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useShallow } from "zustand/react/shallow";
 import { commands } from "../../lib/ipc";
@@ -11,7 +11,7 @@ import {
   useRetryDownload,
   useStartDownload,
 } from "../downloads/hooks";
-import { Download, Folder, RotateCw, X } from "lucide-react";
+import { Download, Folder, Loader2, Plus, RotateCw, X } from "lucide-react";
 import { ProgressBar } from "../../components/ui/ProgressBar";
 import { ModeToggle } from "../window/ModeToggle";
 import { formatEta, formatSpeed } from "../../lib/format";
@@ -45,6 +45,26 @@ const QUALITY_OPTIONS: { value: QualityChoice; label: string }[] = [
   { value: 480, label: "480p" },
   { value: "audio", label: "Audio" },
 ];
+
+// yt-dlp-native sites: pasting their page URL needs no probe — the download
+// planner re-resolves by host to the right provider (yt-dlp). We just make a
+// source from the URL so a card appears.
+const NATIVE_URL_RE =
+  /^https?:\/\/(www\.|m\.)?(youtube\.com|youtu\.be|reddit\.com|vimeo\.com)\//i;
+
+function manualSource(url: string): MediaSourceDto {
+  return {
+    url,
+    format: "progressive_mp_4" as MediaSourceDto["format"],
+    title: null,
+    qualities: [],
+    protected: false,
+    thumbnail: null,
+    durationSecs: null,
+    sourceTabId: null,
+    pageUrl: null,
+  };
+}
 
 function Thumbnail({ source }: { source: MediaSourceDto }) {
   if (!source.thumbnail) {
@@ -154,6 +174,7 @@ export function VolatileLayout() {
   // tab/page, so it tracks whatever's on screen in Opera GX right now.
   const detections = useDetectionsStore(useShallow(visibleDetections));
   const removeDetection = useDetectionsStore((s) => s.remove);
+  const addDetection = useDetectionsStore((s) => s.add);
   const active = useDownloadsStore(useShallow((s) => Object.values(s.items)));
   const addItem = useDownloadsStore((s) => s.add);
 
@@ -216,6 +237,44 @@ export function VolatileLayout() {
     removeDetection(source.url);
   };
 
+  // Manual "paste a link" box — the core action, always one step away without
+  // switching to the full window.
+  const [manualUrl, setManualUrl] = useState("");
+  const [resolving, setResolving] = useState(false);
+  const [manualHint, setManualHint] = useState<string | null>(null);
+
+  const onPasteUrl = async (e: FormEvent) => {
+    e.preventDefault();
+    const u = manualUrl.trim();
+    if (!u || resolving) return;
+    setManualHint(null);
+    setResolving(true);
+    try {
+      if (NATIVE_URL_RE.test(u)) {
+        addDetection(manualSource(u)); // yt-dlp resolves it at download time
+        setManualUrl("");
+      } else {
+        try {
+          addDetection(await commands.probeUrl(u));
+          setManualUrl("");
+        } catch {
+          // Not a direct media link — try extracting from the page.
+          const srcs = await commands.extractFromPage(u);
+          if (srcs.length > 0) {
+            srcs.forEach(addDetection);
+            setManualUrl("");
+          } else {
+            setManualHint("Rien trouvé — passe en mode fenêtre pour l'extraction interactive.");
+          }
+        }
+      }
+    } catch {
+      setManualHint("Lien non reconnu — passe en mode fenêtre pour plus d'options.");
+    } finally {
+      setResolving(false);
+    }
+  };
+
   const activeRunning = active.filter((i) => i.state !== "completed");
   const completed = active.filter((i) => i.state === "completed");
   const isEmpty =
@@ -250,10 +309,40 @@ export function VolatileLayout() {
       </header>
 
       <div className="flex-1 space-y-3 overflow-y-auto p-3">
+        <form onSubmit={onPasteUrl} className="flex gap-1.5">
+          <input
+            value={manualUrl}
+            onChange={(e) => setManualUrl(e.target.value)}
+            placeholder="Coller un lien (YouTube, page vidéo…)"
+            aria-label="Coller un lien"
+            className="min-w-0 flex-1 rounded-lg border border-neutral-800 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-100 outline-none transition-colors placeholder:text-neutral-600 focus:border-accent-500"
+          />
+          <button
+            type="submit"
+            disabled={resolving || !manualUrl.trim()}
+            title="Analyser le lien"
+            aria-label="Analyser le lien"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-600 text-white transition-colors hover:bg-accent-500 disabled:bg-neutral-700 disabled:opacity-50"
+          >
+            {resolving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4" />
+            )}
+          </button>
+        </form>
+        {manualHint && <p className="text-[10px] text-amber-400">{manualHint}</p>}
+
         {isEmpty && (
-          <p className="pt-6 text-center text-xs text-neutral-500">
-            Navigue sur ton navigateur — les vidéos détectées apparaîtront ici.
-          </p>
+          <div className="space-y-1 pt-4 text-center text-xs text-neutral-500">
+            <p>Colle un lien ci-dessus, ou navigue — les vidéos détectées apparaîtront ici.</p>
+            {connected === false && (
+              <p className="text-amber-400/80">
+                Extension non connectée : installe-la via le mode fenêtre →
+                Réglages pour la détection automatique.
+              </p>
+            )}
+          </div>
         )}
 
         {detections.length > 0 && (
