@@ -5,10 +5,44 @@ Video DL sur un PC **Windows 10 ou 11**. Aucune connaissance technique n'est
 supposée : il suffit de suivre les étapes **dans l'ordre** et de copier-coller
 les commandes.
 
-> ⏱️ Comptez environ **30 à 60 minutes** la première fois (surtout des
-> téléchargements et des installations qui tournent toutes seules).
+Il y a **deux façons** d'installer :
+
+- **Option A — l'installeur tout prêt** (recommandé, 5 minutes) : un seul fichier
+  à télécharger, **rien d'autre à installer**. Pour tout le monde.
+- **Option B — compiler soi-même** depuis le code source : réservé si vous voulez
+  modifier le projet. Plus long, plus technique.
 
 ---
+
+# Option A — Installeur tout prêt (recommandé)
+
+L'installeur contient **déjà tout** ce dont l'app a besoin (yt-dlp, FFmpeg, le
+moteur YouTube). Vous n'avez **ni Python, ni Node, ni Rust, ni FFmpeg** à
+installer.
+
+1. Allez sur la page du dépôt : **https://github.com/Alii-Red/video-dl**
+   (connectez-vous au compte **Alii-Red** — le dépôt est privé).
+2. Cliquez sur **Releases** (colonne de droite), puis sur la dernière version.
+3. Dans **Assets**, téléchargez le fichier **`Video DL_..._x64-setup.exe`**.
+4. Lancez-le (double-clic). Si Windows affiche un avertissement
+   « Windows a protégé votre ordinateur » → *Informations complémentaires* →
+   *Exécuter quand même* (c'est normal pour une app non signée).
+   > Si le moteur d'affichage **WebView2** manque, l'installeur le propose
+   > automatiquement : laissez-le s'installer.
+5. Lancez **Video DL** depuis le **menu Démarrer**.
+
+Puis configurez l'extension du navigateur : voir **[Étape 8](#étape-8--installer-lextension-du-navigateur-opera-gx)** plus bas. C'est tout !
+
+> Mise à jour plus tard : retéléchargez simplement le nouvel installeur depuis
+> les Releases et relancez-le. (yt-dlp, lui, se met à jour tout seul via le
+> bouton *Réglages → Maintenance*.)
+
+---
+
+# Option B — Compiler soi-même
+
+> ⏱️ Comptez environ **30 à 60 minutes** la première fois (surtout des
+> téléchargements et des installations qui tournent toutes seules).
 
 ## Comment taper les commandes de ce guide
 
@@ -32,17 +66,17 @@ programme d'installation, et cliquez **Suivant / Installer** jusqu'au bout
 | # | Logiciel | Où le télécharger | À quoi ça sert |
 |---|----------|-------------------|----------------|
 | 1 | **Git** | https://git-scm.com/download/win | Récupérer le code du projet |
-| 2 | **Node.js** (version LTS) | https://nodejs.org | Construire l'interface + faire marcher YouTube |
-| 3 | **Python** (3.x) | https://www.python.org/downloads/ | Faire tourner yt-dlp |
-| 4 | **Rust** | https://www.rust-lang.org/tools/install | Compiler l'application |
-| 5 | **Outils C++ de Visual Studio** | https://visualstudio.microsoft.com/visual-cpp-build-tools/ | Nécessaire pour compiler sous Windows |
+| 2 | **Node.js** (version LTS) | https://nodejs.org | Construire l'interface |
+| 3 | **Rust** | https://www.rust-lang.org/tools/install | Compiler l'application |
+| 4 | **Outils C++ de Visual Studio** | https://visualstudio.microsoft.com/visual-cpp-build-tools/ | Nécessaire pour compiler sous Windows |
 
-### Détails importants pour 2 d'entre eux
+> Pas besoin de Python ni de FFmpeg : yt-dlp, FFmpeg et le moteur YouTube sont
+> téléchargés automatiquement par un script (étape 5) et embarqués dans
+> l'installeur que vous produirez.
 
-**Python (n°3)** : sur le **premier écran** de l'installateur, cochez bien la
-case **« Add python.exe to PATH »** (en bas), **puis** cliquez sur *Install Now*.
+### Détail important pour les Outils C++
 
-**Outils C++ (n°5)** : lancez le fichier téléchargé. Dans la fenêtre qui liste
+**Outils C++ (n°4)** : lancez le fichier téléchargé. Dans la fenêtre qui liste
 des « charges de travail », cochez **« Développement Desktop en C++ »**
 (*Desktop development with C++*), puis cliquez **Installer**. C'est le plus long
 (plusieurs Go).
@@ -66,7 +100,6 @@ Ouvrez un **nouveau** PowerShell (voir plus haut) et collez ces commandes
 ```powershell
 git --version
 node --version
-python --version
 cargo --version
 ```
 
@@ -75,32 +108,15 @@ pas installé (ou que vous n'avez pas redémarré). Reprenez l'étape 1 pour cel
 
 ---
 
-## Étape 3 — Installer yt-dlp et l'outil de build Tauri
-
-Collez ces deux commandes, une par une (elles durent 1 à 2 minutes chacune) :
+## Étape 3 — Installer l'outil de build Tauri
 
 ```powershell
-python -m pip install --upgrade --pre "yt-dlp[default]"
 cargo install tauri-cli --version "^2"
 ```
 
 ---
 
-## Étape 4 — (Recommandé) un FFmpeg complet
-
-Video DL a besoin de **FFmpeg** pour assembler l'image et le son. Un FFmpeg
-« complet » est **détecté automatiquement** s'il est déjà sur le PC.
-
-Le plus simple : installez **Shutter Encoder** (gratuit) depuis
-https://www.shutterencoder.com — l'app s'en servira toute seule.
-
-> Si vous sautez cette étape, YouTube fonctionnera, mais certains sites en
-> « streaming » (HLS) risquent d'échouer au dernier moment. Une bannière dans
-> les **Réglages** de l'app vous préviendra le cas échéant.
-
----
-
-## Étape 5 — Récupérer le projet
+## Étape 4 — Récupérer le projet
 
 Dans PowerShell, collez (cela crée un dossier `video-dl` sur votre Bureau) :
 
@@ -112,6 +128,17 @@ cd video-dl
 
 > Le dépôt est **privé** : Git vous demandera de vous connecter à GitHub
 > (une fenêtre s'ouvre). Connectez-vous avec le compte **Alii-Red**.
+
+---
+
+## Étape 5 — Télécharger les binaires runtime
+
+yt-dlp, FFmpeg et Deno ne sont pas dans le dépôt (trop volumineux). Un script
+les récupère automatiquement (~250 Mo, quelques minutes) :
+
+```powershell
+.\scripts\fetch-runtime.ps1
+```
 
 ---
 
@@ -177,24 +204,23 @@ apparaissent dans la fenêtre Video DL.
 - **Une commande dit « n'est pas reconnu »** → le logiciel correspondant n'est
   pas installé ou le PC n'a pas été redémarré (étape 1 + redémarrage).
 - **Le build échoue sur une erreur de « linker » / `link.exe` introuvable** →
-  les *Outils C++ de Visual Studio* (étape 1, n°5) ne sont pas installés, ou la
+  les *Outils C++ de Visual Studio* (étape 1, n°4) ne sont pas installés, ou la
   charge « Développement Desktop en C++ » n'a pas été cochée.
 - **Fenêtre noire au lancement** → vous avez lancé le mauvais exe : utilisez le
   raccourci du **menu Démarrer**.
 - **YouTube affiche « Video unavailable » / erreur 403** → mettez yt-dlp à jour
   (bouton **« Mettre à jour yt-dlp »** dans Réglages → Maintenance).
-- **Un téléchargement HLS échoue à la toute fin** → installez un FFmpeg complet
-  (étape 4).
 
 ---
 
-## Mises à jour plus tard
+## Mises à jour plus tard (Option B)
 
 Pour récupérer les dernières modifications et reconstruire :
 
 ```powershell
 cd $HOME\Desktop\video-dl
 git pull
+.\scripts\fetch-runtime.ps1
 cd apps\frontend; npm install; cd ..\..
 .\scripts\dev-msvc.ps1 tauri build
 ```

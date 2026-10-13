@@ -27,3 +27,8 @@ Thumbs.db
 # A copy of the repo downloaded as a GitHub ZIP into the project folder — junk.
 /video-dl-main/
 /video-dl-main.zip
+
+# Runtime binaries embedded in the installer (yt-dlp, FFmpeg, Deno). Too big for
+# git (FFmpeg > 100 Mo = au-dessus de la limite GitHub). Fetch with
+# `scripts/fetch-runtime.ps1` before building; the installer bundles them.
+apps/src-tauri/binaries/*.exe

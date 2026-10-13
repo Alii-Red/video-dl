@@ -24,6 +24,13 @@
     "active": true,
     "targets": "all",
     "icon": ["icons/icon.ico"],
-    "externalBin": ["binaries/yt-dlp"]
+    "resources": [
+      "binaries/yt-dlp-x86_64-pc-windows-msvc.exe",
+      "binaries/ffmpeg.exe",
+      "binaries/deno.exe"
+    ],
+    "windows": {
+      "webviewInstallMode": { "type": "downloadBootstrapper" }
+    }
   }
 }

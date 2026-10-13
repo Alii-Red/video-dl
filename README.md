@@ -51,23 +51,35 @@ docs/            ADR d'architecture, BUILD.md, STATUS.md, INTEGRATION-TAURI.md
 scripts/         dev.ps1 (toolchain GNU) et dev-msvc.ps1 (toolchain MSVC)
 ```
 
-## Prérequis
+## Installeur « tout compris »
+
+L'installeur de production **embarque toutes les ressources runtime** —
+yt-dlp (exe autonome), un **FFmpeg complet**, et **Deno** (moteur JS pour
+YouTube). Sur le PC cible : **ni Python, ni Node, ni FFmpeg à installer**, et
+WebView2 s'installe tout seul si besoin. Voir
+[`INSTALL.md`](INSTALL.md) → *Option A*.
+
+## Prérequis (pour compiler soi-même)
 
 - **Rust** (toolchain MSVC recommandé ; GNU possible en repli).
-- **Visual Studio Build Tools** (MSVC) + WebView2 pour le build Tauri.
-- **Node.js** (sert aussi de runtime JS à yt-dlp pour YouTube).
-- **yt-dlp** et un **FFmpeg complet** accessibles (voir ci-dessous).
+- **Visual Studio Build Tools** (MSVC) pour le build Tauri.
+- **Node.js** (build du frontend).
+- `cargo install tauri-cli --version "^2"`.
 
-> Détails et contournements spécifiques (chemin utilisateur accentué, linker…)
-> dans [`docs/BUILD.md`](docs/BUILD.md).
+> Plus besoin de Python ni de FFmpeg côté dev : les binaires runtime sont
+> récupérés par `scripts/fetch-runtime.ps1`. Détails et contournements
+> (chemin utilisateur accentué, linker…) dans [`docs/BUILD.md`](docs/BUILD.md).
 
 ## Build & lancement
 
 ```powershell
-# 1. Dépendances frontend
+# 1. Binaires runtime (yt-dlp, ffmpeg, deno) — non versionnés, ~250 Mo
+.\scripts\fetch-runtime.ps1
+
+# 2. Dépendances frontend
 cd apps/frontend; npm install; cd ../..
 
-# 2. Build de production (frontend embarqué) + installeur NSIS
+# 3. Build de production (frontend + binaires embarqués) + installeur NSIS
 .\scripts\dev-msvc.ps1 tauri build
 # puis installer : target-msvc\release\bundle\nsis\Video DL_..._x64-setup.exe /S
 
@@ -84,10 +96,11 @@ cd apps/frontend; npm install; cd ../..
 
 ### FFmpeg
 
-Le FFmpeg embarqué est minimal (merge DASH YouTube uniquement). Pour remuxer
-l'audio des flux HLS (anime-sama…), l'app **auto-détecte** un FFmpeg complet
-déjà installé (Shutter Encoder, CapCut, ou `ffmpeg` dans le PATH). Une bannière
-dans les Réglages prévient si aucun FFmpeg complet n'est trouvé.
+Un **FFmpeg complet est embarqué** dans l'installeur (remux HLS + merge DASH).
+L'app privilégie un FFmpeg complet déjà présent sur la machine (Shutter Encoder,
+CapCut, PATH) s'il y en a un, et retombe sinon sur celui embarqué. Une bannière
+dans les Réglages prévient dans le cas improbable où aucun FFmpeg complet n'est
+disponible.
 
 ## Extension Opera GX
 
@@ -106,7 +119,9 @@ recommiter.
 
 ```bash
 git clone https://github.com/Alii-Red/video-dl.git
-# sur chaque PC :
+# première fois sur un PC : récupérer les binaires runtime
+# .\scripts\fetch-runtime.ps1
+# puis, à chaque fois :
 git pull                                   # récupérer le travail de l'autre PC
 git add -A && git commit -m "..." && git push
 ```

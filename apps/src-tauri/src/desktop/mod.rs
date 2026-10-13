@@ -194,6 +194,10 @@ fn open_in_explorer(path: &str) -> Cmd<()> {
 /// warning banner so a broken HLS remux isn't a silent mystery.
 struct FfmpegFull(bool);
 
+/// Managed path to the bundled runtime binaries dir (resolved once at startup),
+/// so commands like `update_ytdlp` can find the yt-dlp executable.
+struct BinariesDir(std::path::PathBuf);
+
 #[tauri::command]
 fn ffmpeg_is_full(status: tauri::State<'_, FfmpegFull>) -> bool {
     status.0
@@ -244,54 +248,44 @@ async fn update_settings(state: tauri::State<'_, AppState>, settings: SettingsDt
     commands::update_settings(&state, settings).await
 }
 
-/// Update the bundled yt-dlp (a pip console-script launcher backed by the
-/// system Python's `yt_dlp` package) via `pip install --upgrade --pre`, then report
-/// the resulting version. YouTube breaks yt-dlp often, so a one-click refresh
-/// keeps downloads working without a full app rebuild.
+/// Update the bundled standalone yt-dlp via its built-in self-updater
+/// (`yt-dlp -U --update-to nightly`), then report the resulting version. No
+/// Python required. YouTube breaks yt-dlp often, so a one-click refresh keeps
+/// downloads working without a full app rebuild; nightly carries the fixes first.
 #[tauri::command]
-async fn update_ytdlp() -> Cmd<String> {
-    tauri::async_runtime::spawn_blocking(update_ytdlp_blocking)
+async fn update_ytdlp(bins: tauri::State<'_, BinariesDir>) -> Cmd<String> {
+    let ytdlp = bins.0.join("yt-dlp-x86_64-pc-windows-msvc.exe");
+    tauri::async_runtime::spawn_blocking(move || update_ytdlp_blocking(&ytdlp))
         .await
         .map_err(|e| IpcError::new(IpcErrorKind::Engine, format!("tâche interrompue: {e}")))?
 }
 
-fn update_ytdlp_blocking() -> Result<String, IpcError> {
+fn update_ytdlp_blocking(ytdlp: &std::path::Path) -> Result<String, IpcError> {
     use std::os::windows::process::CommandExt as _;
     const NO_WINDOW: u32 = 0x0800_0000;
 
-    let out = std::process::Command::new("python")
-        // `--pre yt-dlp[default]`: the nightly channel. YouTube's anti-bot
-        // (GVS PO-token enforcement) breaks the stable release's default
-        // player clients for weeks at a time — the fix lands in nightly first
-        // (e.g. the `visionos` client that unblocked 403s in Aug 2026). For a
-        // personal tool that must keep working, nightly is the right channel.
-        .args(["-m", "pip", "install", "--upgrade", "--pre", "yt-dlp[default]"])
+    let out = std::process::Command::new(ytdlp)
+        .args(["-U", "--update-to", "nightly"])
         .creation_flags(NO_WINDOW)
-        .env("PYTHONUTF8", "1")
         .output()
         .map_err(|e| {
             IpcError::new(
                 IpcErrorKind::Engine,
-                format!("Python introuvable ({e}). Installe Python pour mettre à jour yt-dlp."),
+                format!("yt-dlp introuvable ({e})."),
             )
         })?;
     if !out.status.success() {
         let stderr = String::from_utf8_lossy(&out.stderr);
-        let reason = stderr.lines().last().unwrap_or("échec de pip");
+        let reason = stderr.lines().last().unwrap_or("échec de la mise à jour");
         return Err(IpcError::new(
             IpcErrorKind::Engine,
             format!("La mise à jour a échoué : {reason}"),
         ));
     }
 
-    // Report the (possibly new) version from the same launcher the app runs.
-    let ytdlp = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("binaries")
-        .join("yt-dlp-x86_64-pc-windows-msvc.exe");
-    let version = std::process::Command::new(&ytdlp)
+    let version = std::process::Command::new(ytdlp)
         .arg("--version")
         .creation_flags(NO_WINDOW)
-        .env("PYTHONUTF8", "1")
         .output()
         .ok()
         .filter(|o| o.status.success())
@@ -337,6 +331,32 @@ fn resolve_node_runtime() -> Option<String> {
         }
     }
     None
+}
+
+/// The directory holding the bundled runtime binaries (yt-dlp, ffmpeg, deno).
+/// In an installed build they ship as Tauri resources under the app's resource
+/// dir; in `cargo tauri dev` there's no resource dir, so fall back to the source
+/// tree. Resolving this correctly is what makes the app work on a *fresh* PC:
+/// `CARGO_MANIFEST_DIR` only exists on the machine that compiled it.
+fn resolve_binaries_dir(app: &tauri::App) -> std::path::PathBuf {
+    if let Ok(res) = app.path().resource_dir() {
+        let d = res.join("binaries");
+        if d.join("yt-dlp-x86_64-pc-windows-msvc.exe").exists() {
+            return d;
+        }
+    }
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("binaries")
+}
+
+/// JS runtime spec for yt-dlp's `--js-runtimes` (YouTube signature solving).
+/// Prefers the bundled Deno (self-contained — no system Node required), then a
+/// Node already on the machine, else `None` (YouTube won't work, other sites do).
+fn resolve_js_runtime(binaries_dir: &std::path::Path) -> Option<String> {
+    let deno = binaries_dir.join("deno.exe");
+    if deno.exists() {
+        return Some(format!("deno:{}", deno.display()));
+    }
+    resolve_node_runtime()
 }
 
 /// Directory holding the FFmpeg the engine should use (`--ffmpeg-location`).
@@ -534,27 +554,22 @@ pub fn run() {
                 }
             });
 
-            // yt-dlp sidecar. Resolved relative to the crate directory, which is
-            // correct for `cargo tauri dev` (personal/local use — no bundled
-            // installer resolution needed here). A packaged build would instead
-            // resolve this under the resource dir via the shell plugin's sidecar
-            // API.
-            let binaries_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("binaries");
+            // Bundled runtime binaries (yt-dlp, ffmpeg, deno). In an installed
+            // build they're shipped as Tauri resources next to the exe; in
+            // `cargo tauri dev` they're read from the source tree.
+            let binaries_dir = resolve_binaries_dir(app);
             let ytdlp_path = binaries_dir.join("yt-dlp-x86_64-pc-windows-msvc.exe");
+            app.manage(BinariesDir(binaries_dir.clone()));
 
             // FFmpeg lets yt-dlp merge YouTube's separate audio/video streams
-            // and remux HLS (anime-sama, ...) into mp4. The bundled build is a
-            // *minimal* one (no AAC decoder) that CANNOT read the audio params
-            // of an HLS `.ts` stream — the mp4 muxer then rejects the "0
-            // channels" audio and the download fails on "Postprocessing: Stream
-            // #0:1 (copy)". So prefer a *full* FFmpeg already on the machine
-            // (Shutter Encoder, CapCut, PATH — detected by an actual AAC-decoder
-            // capability probe), falling back to the bundled minimal one only
-            // if none is found (still fine for YouTube DASH merges).
+            // and remux HLS (anime-sama, ...) into mp4. The bundled build is now
+            // a *full* static ffmpeg (AAC decoder + https), so HLS remux works
+            // out of the box on any PC. We still let a full FFmpeg already on the
+            // machine (Shutter Encoder, CapCut, PATH) win if present, and fall
+            // back to the bundled one — which is itself full.
             let ffmpeg_dir = resolve_ffmpeg_dir(&binaries_dir);
-            // Whether that resolved FFmpeg can actually remux HLS audio (full
-            // build) vs the minimal bundled fallback — surfaced to the Settings
-            // banner so a failing HLS remux points at the cause.
+            // Whether the resolved FFmpeg can remux HLS audio — surfaced to the
+            // Settings banner (should always be true now that the bundle is full).
             let ffmpeg_full = ffmpeg_dir
                 .as_ref()
                 .map(|d| ffmpeg_can_decode_aac(&d.join("ffmpeg.exe")))
@@ -562,9 +577,9 @@ pub fn run() {
             app.manage(FfmpegFull(ffmpeg_full));
 
             // JS runtime for yt-dlp's YouTube signature solving (mandatory for
-            // YouTube since 2025). Prefer a resolved node.exe path so it works
-            // regardless of the app's inherited PATH; fall back to bare "node".
-            let js_runtime = resolve_node_runtime();
+            // YouTube since 2025). Prefer the bundled Deno (self-contained — no
+            // system Node needed); fall back to a Node on the machine.
+            let js_runtime = resolve_js_runtime(&binaries_dir);
 
             let download_dir = app
                 .path()
