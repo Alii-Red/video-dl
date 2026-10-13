@@ -1,5 +1,15 @@
 # Video DL
 
+> ## ⬇️ [Télécharger Video DL (Windows)](https://github.com/Alii-Red/video-dl/releases/latest)
+>
+> Cliquez le lien ci-dessus, puis téléchargez **`Video DL_..._x64-setup.exe`**
+> dans la section **Assets**. L'installeur contient tout (yt-dlp, FFmpeg, Deno) —
+> rien d'autre à installer.
+>
+> 📖 Besoin d'aide ? → **[Guide d'installation pas à pas](INSTALL.md)**
+
+---
+
 Application desktop **personnelle** de détection et de téléchargement de médias
 (inspirée de Video DownloadHelper). Locale, privée, non distribuée.
 
@@ -9,10 +19,6 @@ YouTube et, plus généralement, les vidéos chargées dans le navigateur (via u
 extension, l'extraction de page, ou un import manuel d'URL), le tout avec
 yt-dlp / FFmpeg. Un widget compact *always-on-top* permet de télécharger en un
 clic pendant la navigation.
-
-> 🟢 **Débutant ?** Suivez le **[guide d'installation pas à pas](INSTALL.md)** :
-> il part de zéro et explique chaque clic. Le reste de ce README est un résumé
-> technique.
 
 ## Fonctionnalités
 

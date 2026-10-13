@@ -1,7 +1,7 @@
 # Dev build/test wrapper for Video DL.
 #
 # Why this exists: the Windows profile path contains a non-ASCII character
-# (C:\Users\Rédouane\...). The MinGW linker (ld) reads its linker-response file
+# (e.g. non-ASCII characters in the user profile path). The MinGW linker (ld) reads its linker-response file
 # as ANSI, so UTF-8 paths with "é" get mangled and ld "cannot find" the .rlib /
 # .o files. Fix: keep the Rust toolchain (sysroot) and the build output on
 # ASCII-only paths under C:\Users\Public, and put MinGW on PATH.

@@ -13,7 +13,7 @@ Le script met en place l'environnement et lance `cargo`. Utilise-le plutôt que
 
 ## Contrainte : nom d'utilisateur non-ASCII
 
-Le profil Windows est `C:\Users\Rédouane\...` (le `é`). Le toolchain **GNU** de
+Le profil Windows est `C:\Users\<Prénom>\...` (le `é`). Le toolchain **GNU** de
 Rust utilise le linker **MinGW `ld`**, qui lit son fichier de réponse en **ANSI**.
 Les chemins UTF-8 contenant `é` sont alors mal décodés et `ld` renvoie
 `cannot find ...libstd-*.rlib`, alors que les fichiers existent bel et bien.
@@ -27,7 +27,7 @@ toolchain et la sortie de build sur des chemins **ASCII**.
 | `CARGO_TARGET_DIR` (objets, rlibs, exe) | `C:\Users\Public\vdl\target` |
 | MinGW (dlltool/gcc/ld) | installé via winget, ajouté au `PATH` par le script |
 
-> Le code source peut rester sous `C:\Users\Rédouane\Desktop\Video DL` : son
+> Le code source peut rester sous `C:\Users\<Prénom>\Desktop\Video DL` : son
 > chemin n'est pas passé au linker (seuls les objets/rlibs le sont).
 
 ## Installation initiale (machine vierge)

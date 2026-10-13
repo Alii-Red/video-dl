@@ -136,7 +136,7 @@ détection ne pouvait rien faire (`probe failed: unrecognized media type`). Ajou
   utilisateur (script de test jetable, supprimé après usage) plutôt que de
   deviner. **Cause** : `yt-dlp` (Python) écrit son chemin de destination sur
   stdout dans l'encodage de la console Windows plutôt qu'en UTF-8 — et ce
-  chemin contient l'accent de `C:\Users\Rédouane\Downloads\`, le même piège
+  chemin contient un accent dans le profil utilisateur (`C:\Users\<Prénom>\Downloads\`), le même piège
   d'encodage rencontré plusieurs fois ailleurs dans ce projet. Ma lecture de
   stdout via `AsyncBufReadExt::lines()` (UTF-8 strict) plantait et tuait le
   process au premier octet invalide. **Correctif double** : (1) variables

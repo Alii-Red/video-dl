@@ -20,11 +20,12 @@ L'installeur contient **déjà tout** ce dont l'app a besoin (yt-dlp, FFmpeg, le
 moteur YouTube). Vous n'avez **ni Python, ni Node, ni Rust, ni FFmpeg** à
 installer.
 
-1. Allez sur la page du dépôt : **https://github.com/Alii-Red/video-dl**
+1. **Téléchargez l'installeur** :
+   👉 **https://github.com/Alii-Red/video-dl/releases/latest**
    (connectez-vous au compte **Alii-Red** — le dépôt est privé).
-2. Cliquez sur **Releases** (colonne de droite), puis sur la dernière version.
-3. Dans **Assets**, téléchargez le fichier **`Video DL_..._x64-setup.exe`**.
-4. Lancez-le (double-clic). Si Windows affiche un avertissement
+   Sur cette page, dépliez **Assets** (en bas) et cliquez sur
+   **`Video DL_..._x64-setup.exe`** pour le télécharger.
+2. Lancez-le (double-clic). Si Windows affiche un avertissement
    « Windows a protégé votre ordinateur » → *Informations complémentaires* →
    *Exécuter quand même* (c'est normal pour une app non signée).
    > Si le moteur d'affichage **WebView2** manque, l'installeur le propose

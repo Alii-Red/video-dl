@@ -2,7 +2,7 @@
 #
 # Unlike dev.ps1 (which uses the GNU toolchain + MinGW as an MSVC-less
 # fallback), this uses the default MSVC toolchain. MSVC's link.exe handles the
-# non-ASCII profile path (C:\Users\Rédouane\...) fine, so the only reason we
+# non-ASCII profile path (e.g. accented characters) fine, so the only reason we
 # still relocate CARGO_HOME / the target dir onto C:\Users\Public is to reuse
 # the crate cache from earlier builds and keep the msvc/gnu build outputs apart.
 #
