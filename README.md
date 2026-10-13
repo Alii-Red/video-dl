@@ -3,10 +3,12 @@
 Application desktop **personnelle** de détection et de téléchargement de médias
 (inspirée de Video DownloadHelper). Locale, privée, non distribuée.
 
-Elle repère les vidéos chargées dans le navigateur (via une extension Opera GX,
-l'extraction de page, ou un import manuel d'URL) et les télécharge avec
-yt-dlp / FFmpeg. Un widget compact *always-on-top* permet de lancer un
-téléchargement en un clic pendant la navigation.
+Pensée avant tout pour **[anime-sama](https://anime-sama.to)** : lance un
+épisode, il apparaît dans l'app, un clic pour le télécharger. Elle gère aussi
+YouTube et, plus généralement, les vidéos chargées dans le navigateur (via une
+extension, l'extraction de page, ou un import manuel d'URL), le tout avec
+yt-dlp / FFmpeg. Un widget compact *always-on-top* permet de télécharger en un
+clic pendant la navigation.
 
 > 🟢 **Débutant ?** Suivez le **[guide d'installation pas à pas](INSTALL.md)** :
 > il part de zéro et explique chaque clic. Le reste de ce README est un résumé

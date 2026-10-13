@@ -78,7 +78,7 @@ describe("VolatileLayout", () => {
   it("shows the empty state with nothing detected", async () => {
     renderWidget();
     expect(
-      await screen.findByText(/les vidéos détectées apparaîtront ici/i),
+      await screen.findByText(/il apparaîtra ici/i),
     ).toBeInTheDocument();
   });
 
@@ -210,7 +210,7 @@ describe("VolatileLayout", () => {
 
     renderWidget();
     expect(
-      await screen.findByText(/les vidéos détectées apparaîtront ici/i),
+      await screen.findByText(/il apparaîtra ici/i),
     ).toBeInTheDocument();
   });
 

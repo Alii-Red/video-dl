@@ -202,6 +202,35 @@ struct BinariesDir(std::path::PathBuf);
 /// extension" button can reveal it in Explorer for a one-click "load unpacked").
 struct ExtensionDir(std::path::PathBuf);
 
+/// Open an http(s) URL in the user's default browser (e.g. the "go to
+/// anime-sama" shortcut). Restricted to web URLs.
+#[tauri::command]
+fn open_external(url: String) -> Cmd<()> {
+    if !(url.starts_with("http://") || url.starts_with("https://")) {
+        return Err(IpcError::new(
+            IpcErrorKind::Validation,
+            "URL non http(s)".to_string(),
+        ));
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt as _;
+        const NO_WINDOW: u32 = 0x0800_0000;
+        // explorer.exe opens an http URL in the default browser, and takes the
+        // URL as a single argument (no shell quoting pitfalls).
+        std::process::Command::new("explorer.exe")
+            .arg(&url)
+            .creation_flags(NO_WINDOW)
+            .spawn()
+            .map_err(|e| IpcError::new(IpcErrorKind::Engine, format!("explorer: {e}")))?;
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = url;
+    }
+    Ok(())
+}
+
 /// Open the bundled extension folder in Explorer so the user can point the
 /// browser's "load unpacked" at it. (The token is auto-configured separately via
 /// the app's /config endpoint, so there's nothing to copy by hand.)
@@ -760,6 +789,7 @@ pub fn run() {
             open_containing_folder,
             open_download_folder,
             reveal_extension_folder,
+            open_external,
             rescan_extension,
             extension_connected,
             ffmpeg_is_full,

@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Download, FolderOpen, Puzzle, Settings, X } from "lucide-react";
+import { Download, FolderOpen, Play, Puzzle, Settings, X } from "lucide-react";
 import { commands } from "../../lib/ipc";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 
 const KEY = "vdl-onboarded";
+const ANIME_SAMA = "https://anime-sama.to";
 
 /** Whether the first-run welcome has been dismissed (per browser profile). */
 export function isOnboarded(): boolean {
@@ -53,8 +54,18 @@ export function WelcomeCard() {
       <div>
         <h3 className="text-lg font-semibold">Bienvenue dans Video DL 👋</h3>
         <p className="mt-1 text-sm text-neutral-400">
-          Télécharge les vidéos que tu regardes. Deux façons de commencer :
+          Télécharge tes épisodes d'<span className="text-neutral-200">anime-sama</span> et
+          les autres vidéos que tu regardes. Pour commencer :
         </p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button onClick={() => void commands.openExternal(ANIME_SAMA)}>
+          <Play className="h-4 w-4" /> Aller sur anime-sama
+        </Button>
+        <span className="text-xs text-neutral-500">
+          une fois l'extension installée, lance un épisode : il apparaîtra ici.
+        </span>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -63,8 +74,8 @@ export function WelcomeCard() {
             <Puzzle className="h-4 w-4 text-accent-400" /> 1. Installer l'extension
           </div>
           <p className="text-xs leading-relaxed text-neutral-400">
-            Détecte automatiquement les vidéos pendant que tu navigues (le token
-            se configure tout seul).
+            Détecte automatiquement les épisodes (anime-sama, etc.) pendant que
+            tu navigues — le token se configure tout seul.
           </p>
           <div className="flex flex-wrap gap-2 pt-1">
             <Button
@@ -85,8 +96,8 @@ export function WelcomeCard() {
             <Download className="h-4 w-4 text-accent-400" /> 2. Ou coller un lien
           </div>
           <p className="text-xs leading-relaxed text-neutral-400">
-            Un lien YouTube ou une page vidéo : colle-le dans le champ ci-dessous
-            et clique <span className="text-neutral-300">Analyser</span>.
+            Un lien YouTube ou une page contenant une vidéo : colle-le dans le
+            champ ci-dessous et clique <span className="text-neutral-300">Analyser</span>.
           </p>
         </div>
       </div>

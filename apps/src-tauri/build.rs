@@ -23,6 +23,7 @@ fn main() {
             "open_containing_folder",
             "open_download_folder",
             "reveal_extension_folder",
+            "open_external",
             "rescan_extension",
             "extension_connected",
             "ffmpeg_is_full",

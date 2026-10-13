@@ -36,6 +36,7 @@
     "allow-open-containing-folder",
     "allow-open-download-folder",
     "allow-reveal-extension-folder",
+    "allow-open-external",
     "allow-rescan-extension",
     "allow-extension-connected",
     "allow-ffmpeg-is-full",

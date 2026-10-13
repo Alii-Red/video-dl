@@ -11,7 +11,7 @@ import {
   useRetryDownload,
   useStartDownload,
 } from "../downloads/hooks";
-import { Download, Folder, Loader2, Plus, RotateCw, X } from "lucide-react";
+import { Download, Folder, Loader2, Play, Plus, RotateCw, X } from "lucide-react";
 import { ProgressBar } from "../../components/ui/ProgressBar";
 import { ModeToggle } from "../window/ModeToggle";
 import { formatEta, formatSpeed } from "../../lib/format";
@@ -334,8 +334,14 @@ export function VolatileLayout() {
         {manualHint && <p className="text-[10px] text-amber-400">{manualHint}</p>}
 
         {isEmpty && (
-          <div className="space-y-1 pt-4 text-center text-xs text-neutral-500">
-            <p>Colle un lien ci-dessus, ou navigue — les vidéos détectées apparaîtront ici.</p>
+          <div className="space-y-2 pt-4 text-center text-xs text-neutral-500">
+            <button
+              onClick={() => void commands.openExternal("https://anime-sama.to")}
+              className="mx-auto flex items-center gap-1.5 rounded-lg bg-accent-600 px-3 py-1.5 text-white transition-colors hover:bg-accent-500"
+            >
+              <Play className="h-3.5 w-3.5" /> Aller sur anime-sama
+            </button>
+            <p>Lance un épisode (ou colle un lien ci-dessus) — il apparaîtra ici.</p>
             {connected === false && (
               <p className="text-amber-400/80">
                 Extension non connectée : installe-la via le mode fenêtre →
