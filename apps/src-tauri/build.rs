@@ -22,6 +22,7 @@ fn main() {
             "delete_history_entry",
             "open_containing_folder",
             "open_download_folder",
+            "reveal_extension_folder",
             "rescan_extension",
             "extension_connected",
             "ffmpeg_is_full",

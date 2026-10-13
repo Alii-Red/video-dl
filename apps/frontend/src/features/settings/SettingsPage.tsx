@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Check,
   Copy,
+  FolderOpen,
   Info,
   RefreshCw,
   RotateCcw,
@@ -199,45 +200,63 @@ export function SettingsPage() {
 
       <Section
         icon={Wifi}
-        title="Détection live (extension Opera GX)"
-        description={
-          <>
-            Copie ces valeurs dans la page d'options de l'extension pour activer
-            la détection automatique pendant la navigation. Voir{" "}
-            <code className="text-neutral-400">apps/extension/README.md</code>.
-          </>
-        }
+        title="Détection live (extension navigateur)"
+        description="Détecte automatiquement les vidéos pendant la navigation. L'extension se configure toute seule (le token est transmis automatiquement) — il reste juste à la charger une fois dans le navigateur."
       >
         <Toggle
           label="Activer le pont WebSocket local"
           checked={draft.extensionEnabled}
           onChange={(v) => patch({ extensionEnabled: v })}
         />
-        <label className="block space-y-1.5">
-          <span className="text-sm text-neutral-300">Port</span>
-          <input
-            type="number"
-            value={draft.extensionPort}
-            onChange={(e) => patch({ extensionPort: Number(e.target.value) || 8787 })}
-            className={inputClass}
-          />
-        </label>
-        <label className="block space-y-1.5">
-          <span className="text-sm text-neutral-300">Token</span>
-          <div className="flex gap-2">
-            <input readOnly value={draft.extensionToken} className={`${inputClass} text-neutral-400`} />
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => navigator.clipboard.writeText(draft.extensionToken)}
-            >
-              <Copy className="h-4 w-4" /> Copier
-            </Button>
+
+        <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-3 text-sm text-neutral-300">
+          <p className="mb-2 font-medium text-neutral-200">Installer l'extension (une fois) :</p>
+          <ol className="list-inside list-decimal space-y-1 text-xs leading-relaxed text-neutral-400">
+            <li>Ouvre <code className="text-neutral-300">opera://extensions</code> (ou <code className="text-neutral-300">chrome://extensions</code>) et active le <strong>Mode développeur</strong>.</li>
+            <li>Clique <strong>« Charger une extension non empaquetée »</strong>.</li>
+            <li>Sélectionne le dossier ci-dessous.</li>
+          </ol>
+          <Button
+            type="button"
+            variant="secondary"
+            className="mt-3"
+            onClick={() => void commands.revealExtensionFolder()}
+          >
+            <FolderOpen className="h-4 w-4" /> Ouvrir le dossier de l'extension
+          </Button>
+          <p className="mt-2 text-xs text-neutral-500">
+            Le token se configure automatiquement — rien à copier-coller.
+          </p>
+        </div>
+
+        <details className="text-xs text-neutral-500">
+          <summary className="cursor-pointer select-none">Config manuelle (avancé)</summary>
+          <div className="mt-2 space-y-2">
+            <label className="block space-y-1.5">
+              <span className="text-neutral-400">Port</span>
+              <input
+                type="number"
+                value={draft.extensionPort}
+                onChange={(e) => patch({ extensionPort: Number(e.target.value) || 8787 })}
+                className={inputClass}
+              />
+            </label>
+            <label className="block space-y-1.5">
+              <span className="text-neutral-400">Token</span>
+              <div className="flex gap-2">
+                <input readOnly value={draft.extensionToken} className={`${inputClass} text-neutral-400`} />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => navigator.clipboard.writeText(draft.extensionToken)}
+                >
+                  <Copy className="h-4 w-4" /> Copier
+                </Button>
+              </div>
+            </label>
+            <p>Redémarre l'app après un changement de port pour reconnecter le pont.</p>
           </div>
-        </label>
-        <p className="text-xs text-neutral-500">
-          Redémarre l'app après un changement de port pour reconnecter le pont.
-        </p>
+        </details>
       </Section>
 
       <Section

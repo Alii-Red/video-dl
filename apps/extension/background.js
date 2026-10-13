@@ -277,6 +277,37 @@ async function config() {
   return { port: stored.port || DEFAULTS.port, token: stored.token || DEFAULTS.token };
 }
 
+// Zero-config: if the extension has never been configured (no token stored),
+// discover the app's port+token from its local /config endpoint. Only the
+// extension (host permissions) can read that response — web pages are blocked by
+// CORS — so the token stays secret. Tries the default port and a couple of
+// neighbours in case the user picked another. Safe to call often: returns early
+// once configured. Never overrides a token the user set manually.
+async function autoConfigure() {
+  const stored = await chrome.storage.local.get(["port", "token"]);
+  if (stored.token) return;
+  const ports = [...new Set([stored.port || DEFAULTS.port, 8787, 8788, 8789])];
+  for (const p of ports) {
+    try {
+      const res = await fetch(`http://127.0.0.1:${p}/config`, { cache: "no-store" });
+      if (!res.ok) continue;
+      const cfg = await res.json();
+      if (cfg && cfg.token) {
+        await chrome.storage.local.set({ port: cfg.port || p, token: cfg.token });
+        log("auto-configured from /config on port", cfg.port || p);
+        return;
+      }
+    } catch (e) {
+      // app not reachable on this port — try the next
+    }
+  }
+}
+
+// Make sure we're configured (auto-discover if needed), then (re)connect.
+function connect() {
+  autoConfigure().finally(() => ensureSocket());
+}
+
 async function ensureSocket() {
   if (socket && socket.readyState === WebSocket.OPEN) return;
   if (connecting) return;
@@ -445,7 +476,9 @@ if (chrome.alarms) {
   chrome.alarms.create(KEEPALIVE_ALARM, { periodInMinutes: 0.5 });
   chrome.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === KEEPALIVE_ALARM) {
-      ensureSocket();
+      // Also retries auto-config, so the extension self-configures as soon as
+      // the app is running even if it wasn't when the extension first loaded.
+      connect();
       // A wake is also a good moment to re-assert the active tab's context /
       // native-page detection, in case the app restarted and lost its state.
       refreshActiveTab();
@@ -454,10 +487,10 @@ if (chrome.alarms) {
 }
 if (chrome.runtime.onStartup) {
   chrome.runtime.onStartup.addListener(() => {
-    ensureSocket();
+    connect();
     refreshActiveTab();
   });
 }
 
-// Warm the connection when the worker wakes.
-ensureSocket();
+// Auto-configure (if needed) and warm the connection when the worker wakes.
+connect();

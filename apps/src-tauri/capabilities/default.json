@@ -35,6 +35,7 @@
     "allow-delete-history-entry",
     "allow-open-containing-folder",
     "allow-open-download-folder",
+    "allow-reveal-extension-folder",
     "allow-rescan-extension",
     "allow-extension-connected",
     "allow-ffmpeg-is-full",

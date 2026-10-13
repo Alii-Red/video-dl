@@ -501,6 +501,12 @@
           "markdownDescription": "Enables the retry_download command without any pre-configured scope."
         },
         {
+          "description": "Enables the reveal_extension_folder command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-reveal-extension-folder",
+          "markdownDescription": "Enables the reveal_extension_folder command without any pre-configured scope."
+        },
+        {
           "description": "Enables the start_download command without any pre-configured scope.",
           "type": "string",
           "const": "allow-start-download",
@@ -637,6 +643,12 @@
           "type": "string",
           "const": "deny-retry-download",
           "markdownDescription": "Denies the retry_download command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the reveal_extension_folder command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-reveal-extension-folder",
+          "markdownDescription": "Denies the reveal_extension_folder command without any pre-configured scope."
         },
         {
           "description": "Denies the start_download command without any pre-configured scope.",

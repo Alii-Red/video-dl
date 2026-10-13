@@ -44,6 +44,7 @@ export const commands = {
     invoke<void>("open_containing_folder", { path }),
   openDownloadFolder: (downloadId: string) =>
     invoke<void>("open_download_folder", { downloadId }),
+  revealExtensionFolder: () => invoke<void>("reveal_extension_folder"),
   rescanExtension: () => invoke<void>("rescan_extension"),
   extensionConnected: () => invoke<boolean>("extension_connected"),
   ffmpegIsFull: () => invoke<boolean>("ffmpeg_is_full"),

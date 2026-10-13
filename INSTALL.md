@@ -178,24 +178,27 @@ Après installation, lancez **Video DL** depuis le **menu Démarrer**.
 
 ---
 
-## Étape 8 — Installer l'extension du navigateur (Opera GX)
+## Étape 8 — Installer l'extension du navigateur
 
-Pour que l'app détecte les vidéos automatiquement pendant que vous naviguez :
+Pour que l'app détecte les vidéos automatiquement pendant que vous naviguez.
+**Le token se configure tout seul** — rien à copier.
 
-1. Dans **Opera GX**, ouvrez l'adresse : `opera://extensions`
-2. En haut à droite, activez le **Mode développeur**.
-3. Cliquez **« Charger une extension non empaquetée »**.
-4. Choisissez le dossier : `video-dl\apps\extension`
-5. Dans l'app **Video DL**, allez dans **Réglages** : copiez le **port** et le
-   **token** affichés.
-6. Dans `opera://extensions`, ouvrez les **options** de l'extension Video DL et
-   collez-y le port et le token.
+1. Dans l'app **Video DL** → **Réglages** → section *Détection live* → cliquez
+   **« Ouvrir le dossier de l'extension »** (garde la fenêtre de l'Explorateur
+   ouverte).
+2. Dans votre navigateur (Opera GX, Chrome, Edge…), ouvrez la page des
+   extensions : `opera://extensions` (ou `chrome://extensions`).
+3. En haut à droite, activez le **Mode développeur**.
+4. Cliquez **« Charger une extension non empaquetée »** et sélectionnez le
+   dossier ouvert à l'étape 1.
 
-C'est prêt ! Naviguez sur un site vidéo : les téléchargements proposés
-apparaissent dans la fenêtre Video DL.
+C'est prêt ! L'extension récupère automatiquement le port et le token de l'app.
+Naviguez sur un site vidéo : les téléchargements proposés apparaissent dans la
+fenêtre Video DL. (Le point à côté de « Video DL » passe au **vert** quand
+l'extension est connectée.)
 
-> Après toute mise à jour de l'extension, revenez sur `opera://extensions` et
-> cliquez le bouton **↻** (recharger) de l'extension Video DL.
+> Après toute mise à jour de l'extension, revenez sur la page des extensions et
+> cliquez le bouton **↻** (recharger).
 
 ---
 

@@ -4,16 +4,63 @@
 //! shared token checked at the WebSocket handshake.
 
 use std::collections::HashMap;
+use std::io::Cursor;
+use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
+use std::task::{Context, Poll};
 
 use futures_util::{SinkExt, StreamExt};
 use serde::Deserialize;
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, ReadBuf};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
 use tokio_tungstenite::tungstenite::handshake::server::{ErrorResponse, Request, Response};
 use tokio_tungstenite::tungstenite::http::StatusCode;
 use tokio_tungstenite::tungstenite::Message;
+
+/// A `TcpStream` with some bytes already read from it, which replays that prefix
+/// before delegating to the socket. Lets us peek the start of the HTTP request
+/// (to answer `GET /config`) and still hand an untouched byte stream to the WS
+/// handshake for a real upgrade.
+struct Rewind {
+    prefix: Cursor<Vec<u8>>,
+    inner: TcpStream,
+}
+
+impl AsyncRead for Rewind {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<std::io::Result<()>> {
+        let pos = self.prefix.position() as usize;
+        let data = self.prefix.get_ref();
+        if pos < data.len() {
+            let n = std::cmp::min(data.len() - pos, buf.remaining());
+            buf.put_slice(&data[pos..pos + n]);
+            self.prefix.set_position((pos + n) as u64);
+            return Poll::Ready(Ok(()));
+        }
+        Pin::new(&mut self.inner).poll_read(cx, buf)
+    }
+}
+
+impl AsyncWrite for Rewind {
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &[u8],
+    ) -> Poll<std::io::Result<usize>> {
+        Pin::new(&mut self.inner).poll_write(cx, buf)
+    }
+    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        Pin::new(&mut self.inner).poll_flush(cx)
+    }
+    fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        Pin::new(&mut self.inner).poll_shutdown(cx)
+    }
+}
 
 use crate::application::error::ApplicationError;
 use crate::application::use_cases::{DetectionMeta, IngestDetection};
@@ -142,6 +189,7 @@ impl ExtensionWsBridge {
             .await
             .map_err(|e| ApplicationError::Probe(format!("WS bind 127.0.0.1:{}: {e}", self.port)))?;
 
+        let port = self.port;
         loop {
             let (stream, _addr) = match listener.accept().await {
                 Ok(x) => x,
@@ -151,18 +199,61 @@ impl ExtensionWsBridge {
             let token = self.token.clone();
             let handle = self.handle.clone();
             tokio::spawn(async move {
-                let _ = handle_connection(stream, ingest, token, handle).await;
+                let _ = handle_connection(stream, port, ingest, token, handle).await;
             });
         }
     }
 }
 
 async fn handle_connection(
-    stream: TcpStream,
+    mut stream: TcpStream,
+    port: u16,
     ingest: Arc<IngestDetection>,
     token: String,
     handle: ExtensionWsHandle,
 ) -> Result<(), ApplicationError> {
+    // Peek the HTTP request headers so we can answer `GET /config` (the
+    // extension's zero-config auto-discovery) without disturbing a real WS
+    // upgrade. We read up to the end of the header block, then either reply with
+    // JSON or replay the bytes into the WS handshake via `Rewind`.
+    let mut head = Vec::with_capacity(1024);
+    let mut tmp = [0u8; 1024];
+    loop {
+        match stream.read(&mut tmp).await {
+            Ok(0) => break, // EOF
+            Ok(n) => {
+                head.extend_from_slice(&tmp[..n]);
+                if head.windows(4).any(|w| w == b"\r\n\r\n") || head.len() > 16384 {
+                    break;
+                }
+            }
+            Err(_) => return Ok(()),
+        }
+    }
+    let head_str = String::from_utf8_lossy(&head);
+    let request_line = head_str.lines().next().unwrap_or("");
+    let is_ws = head_str.to_ascii_lowercase().contains("upgrade: websocket");
+    if !is_ws && request_line.starts_with("GET /config") {
+        // Localhost-only config handshake. No CORS headers, so a web page can't
+        // read the response cross-origin — only the extension (host perms) and
+        // native processes can. The token stays secret from web pages.
+        let body = format!("{{\"port\":{port},\"token\":\"{token}\"}}");
+        let resp = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        let _ = stream.write_all(resp.as_bytes()).await;
+        let _ = stream.flush().await;
+        return Ok(());
+    }
+
+    // Not a config request — replay the peeked bytes into the WS handshake.
+    let stream = Rewind {
+        prefix: Cursor::new(head),
+        inner: stream,
+    };
+
     // Token check at the handshake: extension connects to `ws://127.0.0.1:PORT/?token=…`.
     // An empty configured token means "no auth" (dev convenience only).
     let expected = token.clone();

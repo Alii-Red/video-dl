@@ -198,6 +198,32 @@ struct FfmpegFull(bool);
 /// so commands like `update_ytdlp` can find the yt-dlp executable.
 struct BinariesDir(std::path::PathBuf);
 
+/// Managed path to the bundled browser-extension folder (so the "set up
+/// extension" button can reveal it in Explorer for a one-click "load unpacked").
+struct ExtensionDir(std::path::PathBuf);
+
+/// Open the bundled extension folder in Explorer so the user can point the
+/// browser's "load unpacked" at it. (The token is auto-configured separately via
+/// the app's /config endpoint, so there's nothing to copy by hand.)
+#[tauri::command]
+fn reveal_extension_folder(dir: tauri::State<'_, ExtensionDir>) -> Cmd<()> {
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt as _;
+        const NO_WINDOW: u32 = 0x0800_0000;
+        std::process::Command::new("explorer.exe")
+            .raw_arg(format!("\"{}\"", dir.0.display()))
+            .creation_flags(NO_WINDOW)
+            .spawn()
+            .map_err(|e| IpcError::new(IpcErrorKind::Engine, format!("explorer: {e}")))?;
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = &dir;
+    }
+    Ok(())
+}
+
 #[tauri::command]
 fn ffmpeg_is_full(status: tauri::State<'_, FfmpegFull>) -> bool {
     status.0
@@ -346,6 +372,20 @@ fn resolve_binaries_dir(app: &tauri::App) -> std::path::PathBuf {
         }
     }
     std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("binaries")
+}
+
+/// The bundled browser-extension folder (Tauri resource in release, source tree
+/// in dev).
+fn resolve_extension_dir(app: &tauri::App) -> std::path::PathBuf {
+    if let Ok(res) = app.path().resource_dir() {
+        let d = res.join("extension");
+        if d.join("manifest.json").exists() {
+            return d;
+        }
+    }
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("extension")
 }
 
 /// JS runtime spec for yt-dlp's `--js-runtimes` (YouTube signature solving).
@@ -560,6 +600,7 @@ pub fn run() {
             let binaries_dir = resolve_binaries_dir(app);
             let ytdlp_path = binaries_dir.join("yt-dlp-x86_64-pc-windows-msvc.exe");
             app.manage(BinariesDir(binaries_dir.clone()));
+            app.manage(ExtensionDir(resolve_extension_dir(app)));
 
             // FFmpeg lets yt-dlp merge YouTube's separate audio/video streams
             // and remux HLS (anime-sama, ...) into mp4. The bundled build is now
@@ -718,6 +759,7 @@ pub fn run() {
             delete_history_entry,
             open_containing_folder,
             open_download_folder,
+            reveal_extension_folder,
             rescan_extension,
             extension_connected,
             ffmpeg_is_full,

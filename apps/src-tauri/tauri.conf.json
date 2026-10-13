@@ -24,11 +24,12 @@
     "active": true,
     "targets": "all",
     "icon": ["icons/icon.ico"],
-    "resources": [
-      "binaries/yt-dlp-x86_64-pc-windows-msvc.exe",
-      "binaries/ffmpeg.exe",
-      "binaries/deno.exe"
-    ],
+    "resources": {
+      "binaries/yt-dlp-x86_64-pc-windows-msvc.exe": "binaries/yt-dlp-x86_64-pc-windows-msvc.exe",
+      "binaries/ffmpeg.exe": "binaries/ffmpeg.exe",
+      "binaries/deno.exe": "binaries/deno.exe",
+      "../extension": "extension"
+    },
     "windows": {
       "webviewInstallMode": { "type": "downloadBootstrapper" }
     }
